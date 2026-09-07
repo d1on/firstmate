@@ -1,0 +1,5 @@
+1788756832	2	signal	ios.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/remote/home/state/ios.status
+wake annotation: latest wake-EVENT observed at drain, not current state: ios.status: needs-decision [key=ios-signoff]: approve the iOS release candidate
+OPEN DECISIONS (still open, folded from the durable status logs - not just the latest line):
+ios [key=ios-signoff] needs-decision: approve the iOS release candidate
+OPEN DECISIONS: close one by answering it: bin/fm-send.sh <task> --resolve-key <key> '<answer>'

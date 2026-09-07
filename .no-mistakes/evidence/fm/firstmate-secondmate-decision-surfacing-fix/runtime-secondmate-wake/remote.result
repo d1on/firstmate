@@ -1,0 +1,12 @@
+schema=fm-remote-delta.v1
+status=delta
+path=state/parent-replies.status
+from_offset=0
+to_offset=68
+from_prefix_sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+to_prefix_sha256=1383f42c984efb439494f7bf6b7c8452bf84dabd8b947fb13bc6bdc12719de18
+payload_sha256=1383f42c984efb439494f7bf6b7c8452bf84dabd8b947fb13bc6bdc12719de18
+payload_bytes=68
+reason=e2e-evidence
+
+needs-decision [key=ios-signoff]: approve the iOS release candidate

@@ -1,0 +1,1 @@
+arm_pid=99629	watcher_pid=99684	origin=started	started_at=1788756826	ended_at=1788756828	exit_code=0	signal=none	reason=actionable-signal	beacon_age=1	lock_before=pid:99684|identity:Mon Sep  7 05:53:46 2026     bash /Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M1X2G06A39W7EAT9F3TJFHJW/bin/fm-watch.sh	lock_after=pid:none|identity:none	successor=none

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# No ordinary crew windows are needed for this outcome-delivery scenario.
+case "${1:-}" in list-windows|list-panes) exit 0 ;; esac
+exit 1

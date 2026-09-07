@@ -1,0 +1,52 @@
+{
+  "schema": "fm-secondmate-home-summary.v1",
+  "hold_classifier_schema": "fm-captain-hold-buckets.v1",
+  "generated": "2026-09-07T04:53:52Z",
+  "generated_epoch": 1788756832,
+  "home": "/Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/remote/home",
+  "valid": false,
+  "reason": "missing structured backlog",
+  "invalidity": {
+    "kind": "missing_backlog",
+    "ids": []
+  },
+  "state": "unknown",
+  "active_children": [],
+  "decisions_open": [
+    {
+      "id": "ios",
+      "key": "ios-signoff",
+      "verb": "needs-decision",
+      "summary": "approve the iOS release candidate",
+      "reason": null,
+      "source": "status"
+    }
+  ],
+  "holds": [],
+  "queued": [],
+  "landed": [],
+  "endpoints": [
+    {
+      "id": "ios",
+      "state": "unknown",
+      "source": "none",
+      "endpoint": {
+        "target": null,
+        "exists": null,
+        "agent_alive": "unknown",
+        "status": "unknown",
+        "observed_at": "2026-09-07T04:53:52Z",
+        "freshness": "fresh"
+      }
+    }
+  ],
+  "counts": {
+    "active_children": 0,
+    "decisions_open": 1,
+    "holds": 0,
+    "queued": 0,
+    "landed": 0,
+    "endpoints": 1
+  },
+  "omitted": []
+}

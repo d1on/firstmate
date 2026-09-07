@@ -1,0 +1,20 @@
+ok - watch-arm: an attached arm reports the wake its cycle delivered instead of a false failure
+ok - watch-arm: a delivered wake consumed by the handling turn still closes the attached arm cleanly
+ok - watch-arm: a cycle that delivered no wake of its own still fails loudly
+ok - watch-arm: re-arm surfaces every queued wake and an open remote decision after downtime
+ok - watch-arm: marker publication failure retains stale-lock recovery evidence
+ok - watch-arm: a wake queued after handling drain is recovered once at successor arm
+ok - watch-arm: interrupted handling leaves its wake durable for successor re-drain
+ok - watch-arm: malformed recovery state is quarantined without a successor loop
+ok - watch-arm: publication after recovery handoff is surfaced
+ok - watch-arm: restart publishes recovery before clearing a reused-pid watcher lock
+ok - watch-arm: markerless legacy queues are adopted and recovered
+ok - watch-arm: a watcher close during handling keeps the printed acknowledgement valid
+ok - watch-arm: a moved recovery generation consumes handled rows and names its remedy
+ok - watch-arm: downtime marker publication does not follow symlinks
+ok - watch-arm: a wedged watcher (live pid, stale beacon) is evicted home-scoped and re-armed
+ok - watch-arm: a frozen wedged watcher is evicted via bounded SIGKILL escalation and re-armed
+ok - watch-arm: wedge recovery rechecks health while restart still stops
+ok - watch-arm: SIGKILL refuses a changed watcher identity
+ok - watch-arm: a healthy watcher is attached to, never evicted
+ok - watch: a poll-blocked watcher honors SIGTERM promptly (interruptible sleep)

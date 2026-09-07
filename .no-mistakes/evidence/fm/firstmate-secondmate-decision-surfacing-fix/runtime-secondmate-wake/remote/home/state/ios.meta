@@ -1,0 +1,4 @@
+kind=secondmate
+harness=claude
+home=/remote/ios
+remote_host=remote-mac

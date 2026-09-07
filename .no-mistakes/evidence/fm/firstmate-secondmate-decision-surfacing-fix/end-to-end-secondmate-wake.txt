@@ -1,0 +1,30 @@
+
+=== LOCAL SECOND MATE ===
+[Claude Stop-hook arm output]
+watcher: started pid=99684 (beacon fresh)
+signal: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/local/home/state/local-mate.status
+[durable wake queue]
+1788756828	1	signal	local-mate.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/local/home/state/local-mate.status
+1788756828	2	signal	local-mate.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/local/home/state/local-mate.status
+[firstmate/captain drain output]
+1788756828	2	signal	local-mate.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/local/home/state/local-mate.status
+wake annotation: latest wake-EVENT observed at drain, not current state: local-mate.status: needs-decision [key=release-target]: choose staging or production
+OPEN DECISIONS (still open, folded from the durable status logs - not just the latest line):
+local-mate [key=release-target] needs-decision: choose staging or production
+OPEN DECISIONS: close one by answering it: bin/fm-send.sh <task> --resolve-key <key> '<answer>'
+
+=== REMOTE SECOND MATE (real remote-delta ingest) ===
+[Claude Stop-hook arm output]
+watcher: started pid=4088 (beacon fresh)
+signal: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/remote/home/state/ios.status
+[durable wake queue]
+1788756832	1	signal	ios.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/remote/home/state/ios.status
+1788756832	2	signal	ios.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/remote/home/state/ios.status
+[firstmate/captain drain output]
+1788756832	2	signal	ios.status	needs-decision: /Users/dion/.no-mistakes/evidence/01M1X2G06A39W7EAT9F3TJFHJW/runtime-secondmate-wake/remote/home/state/ios.status
+wake annotation: latest wake-EVENT observed at drain, not current state: ios.status: needs-decision [key=ios-signoff]: approve the iOS release candidate
+OPEN DECISIONS (still open, folded from the durable status logs - not just the latest line):
+ios [key=ios-signoff] needs-decision: approve the iOS release candidate
+OPEN DECISIONS: close one by answering it: bin/fm-send.sh <task> --resolve-key <key> '<answer>'
+
+RESULT: both unsolicited decisions woke the plain Claude Stop-hook arm and appeared in the captain-facing drain without a status poll.

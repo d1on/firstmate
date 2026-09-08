@@ -1,0 +1,5 @@
+ok - Herdr 0.8.2: swallowed doorbell recovered through real fm_task_inbox_ring
+ok - Herdr 0.8.2: foreign draft stayed unchanged and unsubmitted
+ok - Herdr 0.9.0: swallowed doorbell recovered through real fm_task_inbox_ring
+ok - Herdr 0.9.0: foreign draft stayed unchanged and unsubmitted
+ok - cross-version Herdr doorbell guard: 2 version(s) passed, 0 unavailable

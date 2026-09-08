@@ -1,0 +1,3 @@
+ok - claude (2.1.236 (Claude Code)): the doorbell reached a real worker, which acted and acked with the mv
+ok - claude (2.1.236 (Claude Code)): a swallowed doorbell was committed by one re-ring, and the worker acted and acked
+ok - live steering-inbox doorbell guard: 1 delivery check(s), 1 recovery check(s) passed

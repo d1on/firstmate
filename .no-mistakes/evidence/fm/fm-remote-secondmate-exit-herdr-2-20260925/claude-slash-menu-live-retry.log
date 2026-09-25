@@ -1,0 +1,13 @@
+not ok - Claude Code (2.1.282 (Claude Code)) on herdr 0.8.2 never went idle after launch; agent: {"id":"cli:agent:get","result":{"agent":{"agent":"claude","agent_status":"blocked","cwd":"/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M3CHHXHP2KVMSVDC5RW8R129/.test-tmp/fm-herdr-slash-menu-live.1rQdkp/project","focused":true,"foreground_cwd":"/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M3CHHXHP2KVMSVDC5RW8R129/.test-tmp/fm-herdr-slash-menu-live.1rQdkp/project","pane_id":"w1:p1","revision":0,"state_change_seq":1,"tab_id":"w1:t1","terminal_id":"term_65c501fb1271c1","workspace_id":"w1"},"type":"agent_info"}}; screen:
+gerously-skip-permissions --settings '{"feedbackDrafts":"off"}' --model haiku
+─────────────────────────────────────────────────────────────────────────────────────────────
+  Allow external CLAUDE.md file imports?
+  This project's CLAUDE.md imports files outside the current working directory. Never allow
+  this for third-party repositories.
+  External imports:
+    /Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M3CHHXHP2KVMSVDC5RW8R129/AGENTS.md
+  Important: Only use Claude Code with files you trust. Accessing untrusted files may pose
+  security risks https://code.claude.com/docs/en/security
+  ❯ No, disable external imports
+    Yes, allow external imports
+  Enter to confirm · Esc to cancel

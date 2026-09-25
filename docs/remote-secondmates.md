@@ -618,6 +618,10 @@ It passes them explicitly because `config/secondmate-harness` is not inherited i
 Letting the far side re-resolve it would silently move the mate onto another runtime.
 SSH exit 255 leaves completion unknown and the route preserved, exactly as every other verb here.
 
+For Claude mates on Herdr, first ensure the remote host's Firstmate code root, which runs both control and replacement launch, includes the [Claude composer proof](herdr-backend.md#claude-composer-proof); keep the remote home's code converged for the replacement agent's own operation.
+Keep Claude in normal editor mode for a busy mate: Escape in vim insert mode changes editing mode instead of cancelling the turn.
+Relaunch each mate through this guarded verb, one at a time, and confirm it reports a live replacement before moving to the next; if exit cannot be confirmed, leave the old agent and its endpoint intact rather than killing the pane or forcing a second launch.
+
 ### Firstmate code convergence
 
 Session start and every remote launch converge the persistent remote home on the primary's own default-branch commit rather than on the Firstmate copy that host keeps.

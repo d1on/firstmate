@@ -139,6 +139,8 @@ wait_idle() {  # <what>
         # A fresh project path stops on Claude's folder-trust prompt. It
         # preselects "No, exit", so move to "Yes" before confirming.
         case "$(lab pane read "$PANE" --source visible 2>/dev/null || true)" in
+          *'Allow external CLAUDE.md file imports?'*) lab pane send-keys "$PANE" enter >/dev/null \
+            || fail "could not disable external CLAUDE.md imports in the lab" ;;
           *'Yes, I trust this folder'*) lab pane send-keys "$PANE" down enter >/dev/null \
             || fail "could not accept Claude's folder-trust prompt" ;;
         esac
@@ -147,7 +149,8 @@ wait_idle() {  # <what>
     i=$((i + 1))
     sleep 1
   done
-  fail "Claude Code ($VERSION) on $HERDR_VER never went idle $1"
+  fail "Claude Code ($VERSION) on $HERDR_VER never went idle $1; agent: $(lab agent get "$PANE" 2>&1); screen:
+$(screen_tail)"
 }
 
 screen_tail() {

@@ -826,16 +826,22 @@ if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then
   exit 0
 fi
 echo "$$" >> "$FM_HOME/state/arm-ran"
+watcher=$$
+if [ -e "$FM_HOME/state/fixture-afk" ]; then
+  sleep 60 >/dev/null 2>&1 &
+  watcher=$!
+  trap 'kill -TERM "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true; exit 143' TERM
+fi
 mkdir -p "$FM_HOME/state/.watch.lock"
-printf '%s\n' "$$" > "$FM_HOME/state/.watch.lock/pid"
+printf '%s\n' "$watcher" > "$FM_HOME/state/.watch.lock/pid"
 printf '%s\n' "$FM_HOME" > "$FM_HOME/state/.watch.lock/fm-home"
 printf '%s\n' "$FM_HOME/bin/fm-watch.sh" > "$FM_HOME/state/.watch.lock/watcher-path"
-FM_STATE_OVERRIDE="$FM_HOME/state" bash -c '. "$1"; fm_pid_identity "$2"' _ "$FM_HOME/bin/fm-wake-lib.sh" "$$" > "$FM_HOME/state/.watch.lock/pid-identity"
+FM_STATE_OVERRIDE="$FM_HOME/state" bash -c '. "$1"; fm_pid_identity "$2"' _ "$FM_HOME/bin/fm-wake-lib.sh" "$watcher" > "$FM_HOME/state/.watch.lock/pid-identity"
 touch "$FM_HOME/state/.last-watcher-beat"
 printf 'watcher: started pid=%s (beacon fresh)\n' "$$"
 SH
-  [ "$afk" != afk ] || printf ': > "$FM_HOME/state/.afk"\n' >> "$dir/bin/fm-watch-arm.sh"
-  printf 'while :; do sleep 0.05; done\n' >> "$dir/bin/fm-watch-arm.sh"
+  [ "$afk" != afk ] || { : > "$dir/state/fixture-afk"; printf ': > "$FM_HOME/state/.afk"\n' >> "$dir/bin/fm-watch-arm.sh"; }
+  printf 'if [ -e "$FM_HOME/state/fixture-ignore-term" ]; then trap "" TERM; fi\nwhile :; do sleep 0.05; done\n' >> "$dir/bin/fm-watch-arm.sh"
   chmod +x "$dir/bin/fm-watch-arm.sh"
 }
 
@@ -900,29 +906,82 @@ test_renewal_caps_unconfirmed_successor_wait() {
 }
 
 test_superseded_park_boundary_stays_silent() {
-  local dir out status=0 arm_pid
+  local dir out status=0 arm_pid watcher identity i
   dir=$(make_primary_dir "$TMP_ROOT/park-boundary-superseded")
   : > "$dir/state/task.meta"
-  write_quiet_park_arm "$dir"
+  sleep 60 &
+  watcher=$!
+  identity=$(watcher_identity "$dir" "$watcher") || fail "could not identify the current watcher's pid"
+  record_watcher_lock "$dir" "$watcher" "$identity"
+  touch "$dir/state/.last-watcher-beat"
+  # Attached arms do not forward TERM to their watcher; only the arm belongs
+  # to the old generation. The current owner's watcher must remain intact.
+  cat > "$dir/bin/fm-watch-arm.sh" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = --stop-if-watcher ]; then echo stopped >> "$FM_HOME/state/arm-stopped"; exit 0; fi
+if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then echo successor >> "$FM_HOME/state/successor-ran"; exit 0; fi
+echo "$$" >> "$FM_HOME/state/arm-ran"
+printf 'watcher: attached pid=%s (beacon fresh)\n' "$(cat "$FM_HOME/state/.watch.lock/pid")"
+trap 'exit 143' TERM
+while :; do sleep 0.05; done
+SH
+  chmod +x "$dir/bin/fm-watch-arm.sh"
   echo 0 > "$dir/state/park-clock"
   FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
   for ((i=0; i<100; i++)); do
-    [ -s "$dir/state/.watch.lock/pid-identity" ] && break
+    [ -s "$dir/state/arm-ran" ] && break
     sleep 0.05
   done
-  assert_present "$dir/state/.watch.lock/pid-identity" "the superseded quiet park never started"
+  assert_present "$dir/state/arm-ran" "the superseded quiet park never started"
   arm_pid=$(head -n 1 "$dir/state/arm-ran")
   printf 'epoch=999 owner_pid=1 outcome=arming updated_at=%s\nfixture-superseder-identity\n' "$(date +%s)" > "$dir/state/.claude-autoarm-epoch"
   echo 27000 > "$dir/state/park-clock"
   wait "$RUN_AUTOARM_BG_PID" || status=$?
   out=$(cat "$dir/state/autoarm.out")
-  kill -TERM "$arm_pid" 2>/dev/null || true
   expect_code 0 "$status" "a superseded boundary must close silently"
   [ -z "$out" ] || fail "a superseded boundary emitted a wake: $out"
+  ! kill -0 "$arm_pid" 2>/dev/null || fail "a superseded arm outlived its hook"
+  kill -0 "$watcher" 2>/dev/null || fail "a superseded arm stopped the current watcher's cycle"
   [ ! -e "$dir/state/arm-stopped" ] || fail "a superseded boundary stopped the current watcher's cycle"
   [ ! -e "$dir/state/successor-ran" ] || fail "a superseded boundary started a handling successor"
   [ "$(epoch_field "$dir" owner_pid)" = 1 ] || fail "a superseded boundary changed the current generation"
-  pass "auto-arm: a superseded boundary does not stop or replace the current cycle"
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  pass "auto-arm: a superseded boundary reaps its arm without stopping or replacing the current cycle"
+}
+
+test_park_boundary_reaps_term_resistant_arm_before_deadline() {
+  local dir out status=0 hook_pid arm_pid i
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-term-resistant")
+  : > "$dir/state/task.meta"
+  : > "$dir/state/fixture-ignore-term"
+  write_quiet_park_arm "$dir"
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  hook_pid=$RUN_AUTOARM_BG_PID
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/.watch.lock/pid-identity" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/.watch.lock/pid-identity" "the TERM-resistant arm never started"
+  arm_pid=$(head -n 1 "$dir/state/arm-ran")
+  echo 28760 > "$dir/state/park-clock"
+  for ((i=0; i<160; i++)); do
+    kill -0 "$hook_pid" 2>/dev/null || break
+    sleep 0.05
+  done
+  if kill -0 "$hook_pid" 2>/dev/null; then
+    kill -KILL "$arm_pid" 2>/dev/null || true
+    wait "$hook_pid" 2>/dev/null || true
+    fail "the TERM-resistant arm held the hook beyond the renewal budget"
+  fi
+  wait "$hook_pid" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
+  expect_code 2 "$status" "the bounded arm stop must still deliver the renewal"
+  ! kill -0 "$arm_pid" 2>/dev/null || fail "the TERM-resistant arm survived renewal"
+  assert_contains "$out" "check: cycle-renewal" "the renewal was lost while stopping the arm"
+  [ "$(epoch_outcome "$dir")" = rewake ] || fail "the renewal did not commit before the hook deadline"
+  pass "auto-arm: a TERM-resistant arm cannot exhaust the renewal budget"
 }
 
 test_park_clock_requires_the_test_marker() {
@@ -950,7 +1009,7 @@ test_park_clock_requires_the_test_marker() {
 }
 
 test_park_boundary_under_away_mode_leaves_the_watcher() {
-  local dir out status=0
+  local dir out status=0 watcher
   dir=$(make_primary_dir "$TMP_ROOT/park-boundary-afk")
   : > "$dir/state/task.meta"
   write_quiet_park_arm "$dir" afk
@@ -967,6 +1026,10 @@ test_park_boundary_under_away_mode_leaves_the_watcher() {
   expect_code 0 "$status" "away mode owns triage, so the boundary must not rewake"
   assert_not_contains "$out" "cycle-renewal" "away mode must not receive a renewal banner"
   [ ! -e "$dir/state/arm-stopped" ] || fail "the boundary stopped a watcher away mode owns"
+  watcher=$(cat "$dir/state/.watch.lock/pid")
+  kill -0 "$watcher" 2>/dev/null || fail "the boundary's arm TERM stopped the away-owned watcher"
+  kill "$watcher" 2>/dev/null || true
+  kill "$(head -n 1 "$dir/state/arm-ran")" 2>/dev/null || true
   pass "auto-arm: under away mode the park boundary neither stops the watcher nor rewakes"
 }
 
@@ -1837,6 +1900,7 @@ test_single_flight_admits_exactly_one_owner
 test_quiet_park_renews_at_the_park_boundary
 test_renewal_caps_unconfirmed_successor_wait
 test_superseded_park_boundary_stays_silent
+test_park_boundary_reaps_term_resistant_arm_before_deadline
 test_park_clock_requires_the_test_marker
 test_park_boundary_under_away_mode_leaves_the_watcher
 test_term_mid_arm_commits_failure_and_rewakes

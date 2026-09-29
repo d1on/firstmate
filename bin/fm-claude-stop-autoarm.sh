@@ -374,6 +374,20 @@ park_elapsed() {
   printf '%s\n' $(( $(date +%s) - HOOK_STARTED ))
 }
 RENEWAL_LINE='check: cycle-renewal - no event: the Stop hook ended this quiet watcher cycle before its hook timeout; drain, acknowledge, and end the turn, and the next cycle arms on its own'
+# TERM may not complete if the arm is stuck waiting for its watcher. Reap our
+# child within the renewal budget; never let its wait consume Claude's timeout.
+stop_own_arm() {
+  local deadline=$(( $(date +%s) + 5 ))
+  kill -TERM "$ARM_PID" 2>/dev/null || true
+  while fm_pid_alive "$ARM_PID" && [ "$(date +%s)" -lt "$deadline" ] \
+    && [ "$(park_elapsed)" -lt 28770 ]; do
+    sleep 0.1
+  done
+  if fm_pid_alive "$ARM_PID"; then
+    kill -KILL "$ARM_PID" 2>/dev/null || true
+  fi
+  wait "$ARM_PID" 2>/dev/null || true
+}
 run_arm() {  # <output file, or empty for none>
   if [ -n "$1" ]; then
     FM_GUARD_GRACE="$GRACE" "$SCRIPT_DIR/fm-watch-arm.sh" >"$1" 2>&1 &
@@ -383,7 +397,14 @@ run_arm() {  # <output file, or empty for none>
   ARM_PID=$!
   while fm_pid_alive "$ARM_PID"; do
     if [ "$(park_elapsed)" -ge "$PARK_SECONDS" ]; then
+      if [ -e "$STATE/.afk" ]; then
+        # Away mode owns this watcher and the arm supervising it.
+        ARM_PID=
+        return
+      fi
       if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
+        # Reap only our arm; an attached arm does not signal its watcher.
+        stop_own_arm
         ARM_PID=
         return
       fi
@@ -394,12 +415,14 @@ run_arm() {  # <output file, or empty for none>
           BOUNDARY_WATCHER_IDENTITY=$FM_WATCHER_MATCHED_IDENTITY
         fi
       fi
-      kill -TERM "$ARM_PID" 2>/dev/null || true
+      stop_own_arm
       break
     fi
     sleep 1
   done
-  wait "$ARM_PID" || true
+  if [ "$PARK_BOUNDARY" -eq 0 ]; then
+    wait "$ARM_PID" || true
+  fi
   if [ "$PARK_BOUNDARY" -eq 1 ] && [ ! -e "$STATE/.afk" ] \
     && [ -n "$BOUNDARY_WATCHER_IDENTITY" ] && fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
     "$SCRIPT_DIR/fm-watch-arm.sh" --stop-if-watcher "$BOUNDARY_WATCHER_PID" "$BOUNDARY_WATCHER_IDENTITY" >/dev/null 2>&1 || true

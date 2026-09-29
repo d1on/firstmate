@@ -86,7 +86,7 @@ Do not run the hook as a manual arm from a tool turn: a short-lived tool process
 The hook fires on every Stop.
 On each Stop, an eligible primary with supervision need admits one home-scoped owner, which foregrounds `bin/fm-watch-arm.sh` inside the hook-owned process tree.
 While supervision is still needed and away mode remains inactive, an actionable close wakes the idle session through exit 2.
-A park that stays quiet until the hook's park boundary ends itself there with a no-event renewal wake, so it never reaches the hook timeout ([turnend-guard.md](turnend-guard.md#failure-progression-and-block-budget)).
+For quiet-park renewal before the hook timeout, see [turnend-guard.md](turnend-guard.md#failure-progression-and-block-budget).
 
 ### Claude session-lock ownership
 
@@ -483,7 +483,7 @@ It checks that a newly appended keyed decision is classified without rereading e
 - Exit-2 translation.
 - The handling successor an ended attached cycle starts with the closed arm as its predecessor and that outlives the rewake.
 - An unconfirmed successor reported in the banner without withholding the wake.
-- The fixed park boundary's no-event renewal rewake with a covering successor and its away-mode stand-down.
+- The fixed park boundary's renewal rewake, capped successor wait, superseded-generation silence, and away-mode stand-down.
 - Host-timeout HUP/TERM/INT translation into the same durable failure handoff.
 
 It also covers generation-claim single-flight, stuck-claim supersession, superseded-owner silence, notice-marker refusal and retry, ownership-atomic episode reset, and the legacy upgrade shim.

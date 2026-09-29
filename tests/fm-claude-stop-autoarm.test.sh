@@ -800,8 +800,8 @@ test_single_flight_admits_exactly_one_owner() {
 # rewake-triggering failure handoff as any other exhausted arm failure; leaving
 # the generation at `arming` cannot recover without a later manual turn.
 # A quiet park: the arm confirms a started watcher and never closes, like an
-# idle home whose no-change heartbeats are absorbed. --stop records itself and
-# publishes the downtime generation the way a stopped real watcher does.
+# idle home whose no-change heartbeats are absorbed. --stop-if-watcher records
+# itself and publishes the downtime generation like a stopped real watcher.
 # <dir> [afk]: with afk, away mode appears while the arm is parked.
 write_quiet_park_arm() {
   local dir=$1 afk=${2:-}

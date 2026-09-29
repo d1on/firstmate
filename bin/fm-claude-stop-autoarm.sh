@@ -44,10 +44,20 @@
 #     handoff instead of leaving the generation frozen at arming. Claude does
 #     not deliver the exit 2 of a hook it terminated at the configured timeout
 #     as a rewake (measured on Claude Code 2.1.278 and 2.1.281,
-#     docs/verification/supervision.md), so a park that outlives that timeout
-#     records the failure durably without waking an idle primary; nothing here
-#     shortens a quiet park, because no-change heartbeats are absorbed without
-#     closing the arm.
+#     docs/verification/supervision.md), and no-change heartbeats are absorbed
+#     without closing the arm, so an idle home's park would otherwise reach
+#     that timeout and go unsupervised with no wake.
+#   - Park boundary: the hook therefore ends its own plain park before the
+#     registered timeout. After FM_CLAUDE_AUTOARM_PARK_SECONDS (default 27000,
+#     a positive integer below the tracked 28800-second registration, measured
+#     from this firing's start and shared by its retries) it TERMs the arm,
+#     stops this home's watcher through bin/fm-watch-arm.sh --stop (unless
+#     away mode now owns it), and delivers one
+#     "check: cycle-renewal" line through the ordinary actionable path below:
+#     a handling successor covers the short renewal turn, and that turn's end
+#     arms a fresh bounded park. The HUP/TERM/INT translation stays as defense
+#     in depth for an interruption the boundary did not pre-empt. The
+#     supervision host keeps its own boundary (docs/supervision-host.md).
 #   - Handling successor: Pi, omp, and OpenCode start the next arm before they
 #     deliver an actionable wake, so the fleet stays covered while the model
 #     handles it. After an actionable close, including an attached peer cycle
@@ -133,6 +143,7 @@ if [ "$#" -gt 0 ]; then
   esac
 fi
 
+HOOK_STARTED=$(date +%s)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FM_ROOT="${FM_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 FM_HOME="${FM_HOME:-${FM_ROOT_OVERRIDE:-$FM_ROOT}}"
@@ -146,6 +157,11 @@ case "$AUTOARM_ATTEMPTS" in
   1|2|3) : ;;
   *) AUTOARM_ATTEMPTS=2 ;;
 esac
+PARK_SECONDS=${FM_CLAUDE_AUTOARM_PARK_SECONDS:-27000}
+case "$PARK_SECONDS" in ''|*[!0-9]*|0) PARK_SECONDS=27000 ;; esac
+[ "$PARK_SECONDS" -lt 28800 ] || PARK_SECONDS=27000
+PARK_POLL=${FM_CLAUDE_AUTOARM_PARK_POLL:-1}
+case "$PARK_POLL" in ''|*[!0-9.]*|*.*.*) PARK_POLL=1 ;; *[1-9]*) : ;; *) PARK_POLL=1 ;; esac
 
 # shellcheck source=bin/fm-primary-scope-lib.sh
 . "$SCRIPT_DIR/fm-primary-scope-lib.sh"
@@ -339,8 +355,13 @@ trap 'handle_autoarm_signal INT' INT
 # Every non-actionable close is checked against the same identity-matched live
 # watcher and fresh-beacon predicate used by the turn-end guard before it is
 # retried or translated into an operator-visible failure.
+# The wait is bounded by the park boundary (header): at the boundary the arm
+# is TERMed and, unless away mode owns the watcher now, this home's watcher is
+# stopped, so the close below is delivered while Claude still honors exit 2.
 ARM_PID=
 CLOSED_ARM_PID=
+PARK_BOUNDARY=0
+RENEWAL_LINE='check: cycle-renewal - no event: the Stop hook ended this quiet watcher cycle before its hook timeout; drain, acknowledge, and end the turn, and the next cycle arms on its own'
 run_arm() {  # <output file, or empty for none>
   if [ -n "$1" ]; then
     FM_GUARD_GRACE="$GRACE" "$SCRIPT_DIR/fm-watch-arm.sh" >"$1" 2>&1 &
@@ -348,7 +369,18 @@ run_arm() {  # <output file, or empty for none>
     FM_GUARD_GRACE="$GRACE" "$SCRIPT_DIR/fm-watch-arm.sh" >/dev/null 2>&1 &
   fi
   ARM_PID=$!
+  while fm_pid_alive "$ARM_PID"; do
+    if [ $(( $(date +%s) - HOOK_STARTED )) -ge "$PARK_SECONDS" ]; then
+      PARK_BOUNDARY=1
+      kill -TERM "$ARM_PID" 2>/dev/null || true
+      break
+    fi
+    sleep "$PARK_POLL"
+  done
   wait "$ARM_PID" || true
+  if [ "$PARK_BOUNDARY" -eq 1 ] && [ ! -e "$STATE/.afk" ]; then
+    "$SCRIPT_DIR/fm-watch-arm.sh" --stop >/dev/null 2>&1 || true
+  fi
   CLOSED_ARM_PID=$ARM_PID
   ARM_PID=
 }
@@ -433,7 +465,7 @@ while [ "$attempt" -lt "$AUTOARM_ATTEMPTS" ]; do
     exit 0
   fi
 
-  ACTIONABLE=0
+  ACTIONABLE=$PARK_BOUNDARY
   if [ -n "$OUT" ]; then
     grep -Eq "$ACTIONABLE_RE" "$OUT" 2>/dev/null && ACTIONABLE=1
   fi
@@ -525,6 +557,7 @@ if [ "$ACTIONABLE" -eq 1 ]; then
       [ -n "$OUT" ] && awk '/^supervision-host:/ { print; next } /^(signal:|stale:|check:|heartbeat)/ && shown++ < 8' "$OUT" 2>/dev/null
     else
       [ -n "$OUT" ] && grep -E '^(signal:|stale:|check:|heartbeat)' "$OUT" 2>/dev/null | head -8
+      [ "$PARK_BOUNDARY" -eq 0 ] || printf '%s\n' "$RENEWAL_LINE"
     fi
     if [ "$HOST_MODE" -eq 1 ] && [ -e "$STATE/.afk-contract" ] \
       && [ "$(FM_STATE_OVERRIDE="$STATE" "$SCRIPT_DIR/fm-afk-contract.sh" mode 2>/dev/null)" != quiet ]; then

@@ -357,6 +357,8 @@ trap 'handle_autoarm_signal INT' INT
 ARM_PID=
 CLOSED_ARM_PID=
 PARK_BOUNDARY=0
+BOUNDARY_WATCHER_PID=
+BOUNDARY_WATCHER_IDENTITY=
 park_elapsed() {
   if [ "${FM_TEST_SEAM:-}" = 1 ] && [ -n "${FM_TEST_CLAUDE_AUTOARM_CLOCK:-}" ]; then
     local elapsed
@@ -377,15 +379,26 @@ run_arm() {  # <output file, or empty for none>
   ARM_PID=$!
   while fm_pid_alive "$ARM_PID"; do
     if [ "$(park_elapsed)" -ge "$PARK_SECONDS" ]; then
+      if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
+        ARM_PID=
+        return
+      fi
       PARK_BOUNDARY=1
+      if [ -n "$1" ]; then
+        BOUNDARY_WATCHER_PID=$(awk '/^watcher: (started|attached) pid=[0-9]+/ { split($3, p, "="); pid=p[2] } END { print pid }' "$1" 2>/dev/null)
+        if fm_watcher_lock_matches_pid "$STATE" "$SCRIPT_DIR/fm-watch.sh" "$BOUNDARY_WATCHER_PID" "$FM_HOME"; then
+          BOUNDARY_WATCHER_IDENTITY=$FM_WATCHER_MATCHED_IDENTITY
+        fi
+      fi
       kill -TERM "$ARM_PID" 2>/dev/null || true
       break
     fi
     sleep 1
   done
   wait "$ARM_PID" || true
-  if [ "$PARK_BOUNDARY" -eq 1 ] && [ ! -e "$STATE/.afk" ]; then
-    "$SCRIPT_DIR/fm-watch-arm.sh" --stop >/dev/null 2>&1 || true
+  if [ "$PARK_BOUNDARY" -eq 1 ] && [ ! -e "$STATE/.afk" ] \
+    && [ -n "$BOUNDARY_WATCHER_IDENTITY" ] && fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
+    "$SCRIPT_DIR/fm-watch-arm.sh" --stop-if-watcher "$BOUNDARY_WATCHER_PID" "$BOUNDARY_WATCHER_IDENTITY" >/dev/null 2>&1 || true
   fi
   CLOSED_ARM_PID=$ARM_PID
   ARM_PID=
@@ -461,6 +474,11 @@ while [ "$attempt" -lt "$AUTOARM_ATTEMPTS" ]; do
       "$SCRIPT_DIR/fm-supervision-host.sh" park >"${OUT:-/dev/null}" 2>&1 || HOST_RC=$?
   else
     run_arm "$OUT"
+  fi
+
+  if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
+    [ -z "$OUT" ] || rm -f "$OUT" 2>/dev/null || true
+    exit 0
   fi
 
   # AFK may have appeared mid-cycle: the daemon owns triage now, so suppress

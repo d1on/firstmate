@@ -86,6 +86,11 @@
 # "watcher: none running" and exits 0, or exits 1 when the watcher outlived
 # the stop.
 #
+# --stop-if-watcher PID IDENTITY: the same home-scoped stop, but only when
+# this home's lock still names that watcher pid and its identity matches.
+# A different watcher is left untouched, so a superseded park boundary cannot
+# stop its successor's cycle.
+#
 # A copy of this script living under a disposable no-mistakes validation
 # checkout (a path containing /.no-mistakes/worktrees/) refuses every mode
 # outside a marked lab with
@@ -476,6 +481,8 @@ handling_successor_generation() {
 }
 
 mode=arm
+stop_watcher_pid=
+stop_watcher_identity=
 handling_generation=
 handling_watcher_pid=
 take_over_arm_pid=
@@ -489,6 +496,13 @@ case "${1:-}" in
     case "$take_over_arm_pid" in ''|*[!0-9]*) echo "watcher: invalid take-over arm pid" >&2; exit 2 ;; esac
     [ "$#" -eq 2 ] || { echo "watcher: unexpected take-over arguments" >&2; exit 2; }
     ;;
+  --stop-if-watcher)
+    mode=stop
+    stop_watcher_pid=${2:-}
+    stop_watcher_identity=${3:-}
+    case "$stop_watcher_pid" in ''|*[!0-9]*) echo "watcher: invalid stop watcher pid" >&2; exit 2 ;; esac
+    [ -n "$stop_watcher_identity" ] && [ "$#" -eq 3 ] || { echo "watcher: invalid stop watcher identity" >&2; exit 2; }
+    ;;
   --handling-delivered)
     mode=handling-delivered
     handling_generation=${2:-}
@@ -498,7 +512,7 @@ case "${1:-}" in
     case "$handling_watcher_pid" in ''|*[!0-9]*) echo "watcher: invalid successor watcher pid" >&2; exit 2 ;; esac
     [ "$#" -eq 4 ] || { echo "watcher: unexpected handling delivery arguments" >&2; exit 2; }
     ;;
-  *) echo "usage: $(basename "$0") [--restart | --stop | --take-over ARM_PID | --handling-delivered GENERATION --watcher-pid PID]" >&2; exit 2 ;;
+  *) echo "usage: $(basename "$0") [--restart | --stop | --stop-if-watcher PID IDENTITY | --take-over ARM_PID | --handling-delivered GENERATION --watcher-pid PID]" >&2; exit 2 ;;
 esac
 
 if [ "$mode" = handling-delivered ]; then
@@ -516,8 +530,10 @@ STOPPED_PID=
 stop_home_watcher() {
   local lock_pid i
   lock_pid=$(cat "$WATCH_LOCK/pid" 2>/dev/null || true)
+  [ -z "$stop_watcher_pid" ] || [ "$lock_pid" = "$stop_watcher_pid" ] || return 0
   fm_pid_alive "$lock_pid" || return 0
   if fm_watcher_lock_matches_pid "$STATE" "$WATCH" "$lock_pid" "$FM_HOME"; then
+    [ -z "$stop_watcher_pid" ] || [ "$FM_WATCHER_MATCHED_IDENTITY" = "$stop_watcher_identity" ] || return 0
     kill -TERM "$lock_pid" 2>/dev/null || true
     i=0
     while [ "$i" -lt 50 ] && fm_pid_alive "$lock_pid"; do

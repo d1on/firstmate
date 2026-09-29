@@ -807,7 +807,9 @@ write_quiet_park_arm() {
   local dir=$1 afk=${2:-}
   cat > "$dir/bin/fm-watch-arm.sh" <<'SH'
 #!/usr/bin/env bash
-if [ "${1:-}" = --stop ]; then
+if [ "${1:-}" = --stop-if-watcher ]; then
+  [ "$(cat "$FM_HOME/state/.watch.lock/pid" 2>/dev/null)" = "$2" ] || exit 0
+  [ "$(cat "$FM_HOME/state/.watch.lock/pid-identity" 2>/dev/null)" = "$3" ] || exit 0
   echo "$$" >> "$FM_HOME/state/arm-stopped"
   printf 'pending:downtime:fixture-generation\n' > "$FM_HOME/state/.watcher-down"
   printf 'watcher: stopped pid=%s\n' "$$"
@@ -819,6 +821,11 @@ if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then
   exit 0
 fi
 echo "$$" >> "$FM_HOME/state/arm-ran"
+mkdir -p "$FM_HOME/state/.watch.lock"
+printf '%s\n' "$$" > "$FM_HOME/state/.watch.lock/pid"
+printf '%s\n' "$FM_HOME" > "$FM_HOME/state/.watch.lock/fm-home"
+printf '%s\n' "$FM_HOME/bin/fm-watch.sh" > "$FM_HOME/state/.watch.lock/watcher-path"
+FM_STATE_OVERRIDE="$FM_HOME/state" bash -c '. "$1"; fm_pid_identity "$2"' _ "$FM_HOME/bin/fm-wake-lib.sh" "$$" > "$FM_HOME/state/.watch.lock/pid-identity"
 touch "$FM_HOME/state/.last-watcher-beat"
 printf 'watcher: started pid=%s (beacon fresh)\n' "$$"
 SH
@@ -838,10 +845,10 @@ test_quiet_park_renews_at_the_park_boundary() {
   echo 0 > "$dir/state/park-clock"
   FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
   for ((i=0; i<100; i++)); do
-    [ -s "$dir/state/arm-ran" ] && break
+    [ -s "$dir/state/.watch.lock/pid-identity" ] && break
     sleep 0.05
   done
-  assert_present "$dir/state/arm-ran" "the quiet park never started"
+  assert_present "$dir/state/.watch.lock/pid-identity" "the quiet park never started"
   echo 27000 > "$dir/state/park-clock"
   wait "$RUN_AUTOARM_BG_PID" || status=$?
   out=$(cat "$dir/state/autoarm.out")
@@ -856,6 +863,32 @@ test_quiet_park_renews_at_the_park_boundary() {
     "the renewal turn must be covered by a successor linked to the parked arm"
   [ "$(wc -l < "$dir/state/arm-ran" | tr -d ' ')" = 1 ] || fail "the boundary must not retry the foreground arm"
   pass "auto-arm: a quiet park renews itself at the park boundary with one rewake and a covering successor"
+}
+
+test_superseded_park_boundary_stays_silent() {
+  local dir out status=0 arm_pid
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-superseded")
+  : > "$dir/state/task.meta"
+  write_quiet_park_arm "$dir"
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/.watch.lock/pid-identity" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/.watch.lock/pid-identity" "the superseded quiet park never started"
+  arm_pid=$(head -n 1 "$dir/state/arm-ran")
+  printf 'epoch=999 owner_pid=1 outcome=arming updated_at=%s\nfixture-superseder-identity\n' "$(date +%s)" > "$dir/state/.claude-autoarm-epoch"
+  echo 27000 > "$dir/state/park-clock"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
+  kill -TERM "$arm_pid" 2>/dev/null || true
+  expect_code 0 "$status" "a superseded boundary must close silently"
+  [ -z "$out" ] || fail "a superseded boundary emitted a wake: $out"
+  [ ! -e "$dir/state/arm-stopped" ] || fail "a superseded boundary stopped the current watcher's cycle"
+  [ ! -e "$dir/state/successor-ran" ] || fail "a superseded boundary started a handling successor"
+  [ "$(epoch_field "$dir" owner_pid)" = 1 ] || fail "a superseded boundary changed the current generation"
+  pass "auto-arm: a superseded boundary does not stop or replace the current cycle"
 }
 
 test_park_clock_requires_the_test_marker() {
@@ -1768,6 +1801,7 @@ test_arms_for_x_mode_poll_need_without_inflight
 test_arms_for_registered_custom_check_without_inflight
 test_single_flight_admits_exactly_one_owner
 test_quiet_park_renews_at_the_park_boundary
+test_superseded_park_boundary_stays_silent
 test_park_clock_requires_the_test_marker
 test_park_boundary_under_away_mode_leaves_the_watcher
 test_term_mid_arm_commits_failure_and_rewakes

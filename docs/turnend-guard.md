@@ -384,7 +384,7 @@ The auto-arm itself rechecks the healthy watcher predicate and retries a bounded
 
 The foreground arm legitimately follows a healthy watcher until its next wake.
 Claude drops the exit 2 of a hook it terminated at the configured timeout, and an idle home's no-change heartbeats never close the park, so the hook ends a quiet park itself at its park boundary, below the registered timeout.
-There it stops the home's watcher, starts a handling successor, and delivers one no-event `check: cycle-renewal` rewake; that short turn's end arms the next bounded park (`bin/fm-claude-stop-autoarm.sh` header owns the boundary and its tunable).
+There it stops the home's watcher, starts a handling successor, and delivers one no-event `check: cycle-renewal` rewake; that short turn's end arms the next bounded park (`bin/fm-claude-stop-autoarm.sh` header owns the fixed boundary).
 The hook also catches HUP, TERM, and INT from host timeout or teardown and commits the ordinary durable failed outcome and failure-notice marker before exiting 2 for a recovery turn, as defense in depth for an interruption the boundary did not pre-empt.
 
 The first fresh exhausted-failure epoch preserves its handoff without consuming a blocked-stop count.

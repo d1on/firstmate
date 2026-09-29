@@ -831,11 +831,20 @@ SH
 # so an idle home's quiet park must end itself at the park boundary and be
 # delivered as an ordinary rewake with a covering successor.
 test_quiet_park_renews_at_the_park_boundary() {
-  local dir out status arm_pid
+  local dir out status=0 arm_pid
   dir=$(make_primary_dir "$TMP_ROOT/park-boundary")
   : > "$dir/state/task.meta"
   write_quiet_park_arm "$dir"
-  out=$(FM_CLAUDE_AUTOARM_PARK_SECONDS=2 FM_CLAUDE_AUTOARM_PARK_POLL=0.1 run_autoarm "$dir" 2>/dev/null); status=$?
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/arm-ran" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/arm-ran" "the quiet park never started"
+  echo 27000 > "$dir/state/park-clock"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
   expect_code 2 "$status" "a park reaching its boundary must exit 2 so Claude rewakes before its timeout"
   assert_contains "$out" "check: cycle-renewal" "the boundary rewake must carry the renewal line"
   assert_contains "$out" "bin/fm-wake-drain.sh" "the boundary rewake must direct the drain-first protocol"
@@ -849,29 +858,45 @@ test_quiet_park_renews_at_the_park_boundary() {
   pass "auto-arm: a quiet park renews itself at the park boundary with one rewake and a covering successor"
 }
 
-test_park_boundary_rejects_values_at_or_past_the_registration() {
-  local dir out hook_pid status=0
-  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-invalid")
+test_park_clock_requires_the_test_marker() {
+  local dir hook_pid status=0
+  dir=$(make_primary_dir "$TMP_ROOT/park-clock-unmarked")
   : > "$dir/state/task.meta"
   write_quiet_park_arm "$dir"
-  out="$dir/state/autoarm.out"
-  FM_CLAUDE_AUTOARM_PARK_SECONDS=28800 FM_CLAUDE_AUTOARM_PARK_POLL=0.1 run_autoarm_bg "$dir" "$out"
-  sleep 3
-  [ ! -e "$dir/state/arm-stopped" ] || fail "a boundary at the 28800-second registration must fall back to the default"
+  echo 27000 > "$dir/state/park-clock"
+  FM_TEST_SEAM='' FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" \
+    FM_CLAUDE_AUTOARM_PARK_SECONDS=1 FM_CLAUDE_AUTOARM_PARK_POLL=0.01 \
+    run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/arm-ran" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/arm-ran" "the unmarked quiet park never started"
+  sleep 2
+  [ ! -e "$dir/state/arm-stopped" ] || fail "an unmarked test clock or removed override ended the park"
   hook_pid=$(epoch_field "$dir" owner_pid)
   [ -n "$hook_pid" ] || fail "auto-arm did not publish its generation owner"
   kill -TERM "$hook_pid" 2>/dev/null || fail "could not TERM the parked auto-arm owner"
   wait "$RUN_AUTOARM_BG_PID" || status=$?
-  expect_code 2 "$status" "a TERM before the default boundary keeps the failure translation"
-  pass "auto-arm: a park boundary at or past the registration falls back to the default"
+  expect_code 2 "$status" "a TERM before the fixed boundary keeps the failure translation"
+  pass "auto-arm: the test clock and removed overrides cannot shorten an unmarked park"
 }
 
 test_park_boundary_under_away_mode_leaves_the_watcher() {
-  local dir out status
+  local dir out status=0
   dir=$(make_primary_dir "$TMP_ROOT/park-boundary-afk")
   : > "$dir/state/task.meta"
   write_quiet_park_arm "$dir" afk
-  out=$(FM_CLAUDE_AUTOARM_PARK_SECONDS=2 FM_CLAUDE_AUTOARM_PARK_POLL=0.1 run_autoarm "$dir" 2>/dev/null); status=$?
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -e "$dir/state/.afk" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/.afk" "away mode never appeared during the park"
+  echo 27000 > "$dir/state/park-clock"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
   expect_code 0 "$status" "away mode owns triage, so the boundary must not rewake"
   assert_not_contains "$out" "cycle-renewal" "away mode must not receive a renewal banner"
   [ ! -e "$dir/state/arm-stopped" ] || fail "the boundary stopped a watcher away mode owns"
@@ -1743,7 +1768,7 @@ test_arms_for_x_mode_poll_need_without_inflight
 test_arms_for_registered_custom_check_without_inflight
 test_single_flight_admits_exactly_one_owner
 test_quiet_park_renews_at_the_park_boundary
-test_park_boundary_rejects_values_at_or_past_the_registration
+test_park_clock_requires_the_test_marker
 test_park_boundary_under_away_mode_leaves_the_watcher
 test_term_mid_arm_commits_failure_and_rewakes
 test_abandoned_owner_claim_is_reclaimed_and_rearms

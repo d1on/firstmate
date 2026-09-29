@@ -52,7 +52,9 @@
 #     registration, measured from this firing's start and shared by its retries)
 #     it TERMs the arm and conditionally stops only the identity-matched
 #     watcher from this cycle through bin/fm-watch-arm.sh --stop-if-watcher
-#     (unless away mode now owns it). A superseded generation exits silently.
+#     (unless away mode now owns it). A superseded generation releases its own
+#     arm without signalling the watcher a newer generation may follow, and
+#     exits silently.
 #     It delivers one "check: cycle-renewal" line through the ordinary
 #     actionable path below: a handling successor covers the short renewal
 #     turn, and that turn's end arms a fresh bounded park. Successor
@@ -374,11 +376,14 @@ park_elapsed() {
   printf '%s\n' $(( $(date +%s) - HOOK_STARTED ))
 }
 RENEWAL_LINE='check: cycle-renewal - no event: the Stop hook ended this quiet watcher cycle before its hook timeout; drain, acknowledge, and end the turn, and the next cycle arms on its own'
-# TERM may not complete if the arm is stuck waiting for its watcher. Reap our
-# child within the renewal budget; never let its wait consume Claude's timeout.
-stop_own_arm() {
+# Reap our arm within the renewal budget; never let its wait consume Claude's
+# timeout. TERM (the default) ends the arm and the watcher it started, and may
+# not complete while the arm waits for that watcher. USR1 releases the arm
+# without signalling its watcher (bin/fm-watch-arm.sh header, "Release"). KILL,
+# the fallback for both, never reaches the watcher either.
+stop_own_arm() {  # [TERM|USR1]
   local deadline=$(( $(date +%s) + 5 ))
-  kill -TERM "$ARM_PID" 2>/dev/null || true
+  kill "-${1:-TERM}" "$ARM_PID" 2>/dev/null || true
   while fm_pid_alive "$ARM_PID" && [ "$(date +%s)" -lt "$deadline" ] \
     && [ "$(park_elapsed)" -lt 28770 ]; do
     sleep 0.1
@@ -403,8 +408,9 @@ run_arm() {  # <output file, or empty for none>
         return
       fi
       if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
-        # Reap only our arm; an attached arm does not signal its watcher.
-        stop_own_arm
+        # A newer generation owns supervision and may follow the watcher our
+        # arm started, so reap only the arm and leave that watcher running.
+        stop_own_arm USR1
         ARM_PID=
         return
       fi

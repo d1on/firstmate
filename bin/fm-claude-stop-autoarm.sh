@@ -48,9 +48,9 @@
 #     without closing the arm, so an idle home's park would otherwise reach
 #     that timeout and go unsupervised with no wake.
 #   - Park boundary: the hook therefore ends its own plain park before the
-#     registered timeout. After FM_CLAUDE_AUTOARM_PARK_SECONDS (default 27000,
-#     a positive integer below the tracked 28800-second registration, measured
-#     from this firing's start and shared by its retries) it TERMs the arm,
+#     registered timeout. After 27000 seconds (below the tracked 28800-second
+#     registration, measured from this firing's start and shared by its retries)
+#     it TERMs the arm,
 #     stops this home's watcher through bin/fm-watch-arm.sh --stop (unless
 #     away mode now owns it), and delivers one
 #     "check: cycle-renewal" line through the ordinary actionable path below:
@@ -157,11 +157,7 @@ case "$AUTOARM_ATTEMPTS" in
   1|2|3) : ;;
   *) AUTOARM_ATTEMPTS=2 ;;
 esac
-PARK_SECONDS=${FM_CLAUDE_AUTOARM_PARK_SECONDS:-27000}
-case "$PARK_SECONDS" in ''|*[!0-9]*|0) PARK_SECONDS=27000 ;; esac
-[ "$PARK_SECONDS" -lt 28800 ] || PARK_SECONDS=27000
-PARK_POLL=${FM_CLAUDE_AUTOARM_PARK_POLL:-1}
-case "$PARK_POLL" in ''|*[!0-9.]*|*.*.*) PARK_POLL=1 ;; *[1-9]*) : ;; *) PARK_POLL=1 ;; esac
+PARK_SECONDS=27000
 
 # shellcheck source=bin/fm-primary-scope-lib.sh
 . "$SCRIPT_DIR/fm-primary-scope-lib.sh"
@@ -361,6 +357,16 @@ trap 'handle_autoarm_signal INT' INT
 ARM_PID=
 CLOSED_ARM_PID=
 PARK_BOUNDARY=0
+park_elapsed() {
+  if [ "${FM_TEST_SEAM:-}" = 1 ] && [ -n "${FM_TEST_CLAUDE_AUTOARM_CLOCK:-}" ]; then
+    local elapsed
+    elapsed=$(cat "$FM_TEST_CLAUDE_AUTOARM_CLOCK" 2>/dev/null) || elapsed=0
+    case "$elapsed" in ''|*[!0-9]*) elapsed=0 ;; esac
+    printf '%s\n' "$elapsed"
+    return
+  fi
+  printf '%s\n' $(( $(date +%s) - HOOK_STARTED ))
+}
 RENEWAL_LINE='check: cycle-renewal - no event: the Stop hook ended this quiet watcher cycle before its hook timeout; drain, acknowledge, and end the turn, and the next cycle arms on its own'
 run_arm() {  # <output file, or empty for none>
   if [ -n "$1" ]; then
@@ -370,12 +376,12 @@ run_arm() {  # <output file, or empty for none>
   fi
   ARM_PID=$!
   while fm_pid_alive "$ARM_PID"; do
-    if [ $(( $(date +%s) - HOOK_STARTED )) -ge "$PARK_SECONDS" ]; then
+    if [ "$(park_elapsed)" -ge "$PARK_SECONDS" ]; then
       PARK_BOUNDARY=1
       kill -TERM "$ARM_PID" 2>/dev/null || true
       break
     fi
-    sleep "$PARK_POLL"
+    sleep 1
   done
   wait "$ARM_PID" || true
   if [ "$PARK_BOUNDARY" -eq 1 ] && [ ! -e "$STATE/.afk" ]; then

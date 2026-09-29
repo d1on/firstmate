@@ -817,6 +817,11 @@ if [ "${1:-}" = --stop-if-watcher ]; then
 fi
 if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then
   printf 'arm=%s predecessor=%s\n' "$$" "$FM_WATCH_PREDECESSOR_ARM_PID" >> "$FM_HOME/state/successor-ran"
+  if [ -e "$FM_HOME/state/successor-no-confirm" ]; then
+    echo 28770 > "$FM_HOME/state/park-clock"
+    while [ -e "$FM_HOME/state/successor-no-confirm" ]; do sleep 0.05; done
+    exit 0
+  fi
   printf 'watcher: started pid=%s (beacon fresh)\n' "$$"
   exit 0
 fi
@@ -863,6 +868,35 @@ test_quiet_park_renews_at_the_park_boundary() {
     "the renewal turn must be covered by a successor linked to the parked arm"
   [ "$(wc -l < "$dir/state/arm-ran" | tr -d ' ')" = 1 ] || fail "the boundary must not retry the foreground arm"
   pass "auto-arm: a quiet park renews itself at the park boundary with one rewake and a covering successor"
+}
+
+test_renewal_caps_unconfirmed_successor_wait() {
+  local dir out status=0 started successor_pid
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-successor-budget")
+  : > "$dir/state/task.meta"
+  : > "$dir/state/successor-no-confirm"
+  write_quiet_park_arm "$dir"
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" FM_ARM_CONFIRM_TIMEOUT=8 \
+    run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/.watch.lock/pid-identity" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/.watch.lock/pid-identity" "the budgeted quiet park never started"
+  started=$(date +%s)
+  echo 27000 > "$dir/state/park-clock"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
+  successor_pid=$(head -n 1 "$dir/state/successor-ran" 2>/dev/null | cut -d' ' -f1 | cut -d= -f2)
+  rm -f "$dir/state/successor-no-confirm"
+  [ -z "$successor_pid" ] || kill -TERM "$successor_pid" 2>/dev/null || true
+  expect_code 2 "$status" "the capped successor wait must still deliver the renewal"
+  [ $(( $(date +%s) - started )) -lt 8 ] || fail "the successor wait consumed the hook's remaining budget"
+  assert_contains "$out" "check: cycle-renewal" "the renewal reason was lost"
+  assert_contains "$out" "did not confirm a live watcher" "the unconfirmed successor must be reported"
+  [ "$(epoch_outcome "$dir")" = rewake ] || fail "the renewal must commit rewake before timeout"
+  pass "auto-arm: an unconfirmed successor cannot consume the renewal's hook budget"
 }
 
 test_superseded_park_boundary_stays_silent() {
@@ -1801,6 +1835,7 @@ test_arms_for_x_mode_poll_need_without_inflight
 test_arms_for_registered_custom_check_without_inflight
 test_single_flight_admits_exactly_one_owner
 test_quiet_park_renews_at_the_park_boundary
+test_renewal_caps_unconfirmed_successor_wait
 test_superseded_park_boundary_stays_silent
 test_park_clock_requires_the_test_marker
 test_park_boundary_under_away_mode_leaves_the_watcher

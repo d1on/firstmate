@@ -50,14 +50,18 @@
 #   - Park boundary: the hook therefore ends its own plain park before the
 #     registered timeout. After 27000 seconds (below the tracked 28800-second
 #     registration, measured from this firing's start and shared by its retries)
-#     it TERMs the arm,
-#     stops this home's watcher through bin/fm-watch-arm.sh --stop (unless
-#     away mode now owns it), and delivers one
-#     "check: cycle-renewal" line through the ordinary actionable path below:
-#     a handling successor covers the short renewal turn, and that turn's end
-#     arms a fresh bounded park. The HUP/TERM/INT translation stays as defense
-#     in depth for an interruption the boundary did not pre-empt. The
-#     supervision host keeps its own boundary (docs/supervision-host.md).
+#     it TERMs the arm and conditionally stops only the identity-matched
+#     watcher from this cycle through bin/fm-watch-arm.sh --stop-if-watcher
+#     (unless away mode now owns it). A superseded generation exits silently.
+#     It delivers one "check: cycle-renewal" line through the ordinary
+#     actionable path below: a handling successor covers the short renewal
+#     turn, and that turn's end arms a fresh bounded park. Successor
+#     confirmation cannot wait beyond 28770 seconds elapsed from the firing's
+#     start, leaving time to commit the rewake before the hook timeout even
+#     when confirmation fails.
+#     The HUP/TERM/INT translation stays as defense in depth for an
+#     interruption the boundary did not pre-empt. The supervision host keeps
+#     its own boundary (docs/supervision-host.md).
 #   - Handling successor: Pi, omp, and OpenCode start the next arm before they
 #     deliver an actionable wake, so the fleet stays covered while the model
 #     handles it. After an actionable close, including an attached peer cycle
@@ -300,11 +304,11 @@ autoarm_record() {  # <outcome>
 }
 
 # Claude terminates the complete async-hook process tree when the configured
-# hook timeout expires. The arm is intentionally allowed to follow a healthy
-# watcher until its next wake, so that wait cannot be shortened without adding
-# artificial turns. Translate a host interruption through the ordinary durable
-# failure protocol instead: the winning generation records a terminal outcome,
-# creates the episode marker, and exits 2 so Claude delivers a recovery turn -
+# hook timeout expires. The arm follows a healthy watcher until its next wake
+# or the earlier park boundary (header). Translate an external interruption
+# through the ordinary durable failure protocol instead: the winning
+# generation records a terminal outcome, creates the episode marker, and exits
+# 2 so Claude delivers a recovery turn -
 # except after Claude's own timeout kill, whose exit 2 is dropped (header).
 # A superseded generation remains silent, and an episode whose attended
 # fail-open was already consumed must not restart automatic continuation.
@@ -351,9 +355,9 @@ trap 'handle_autoarm_signal INT' INT
 # Every non-actionable close is checked against the same identity-matched live
 # watcher and fresh-beacon predicate used by the turn-end guard before it is
 # retried or translated into an operator-visible failure.
-# The wait is bounded by the park boundary (header): at the boundary the arm
-# is TERMed and, unless away mode owns the watcher now, this home's watcher is
-# stopped, so the close below is delivered while Claude still honors exit 2.
+# The wait is bounded by the park boundary (header): only the current owner
+# TERMs its arm and conditionally stops its identity-matched watcher unless
+# away mode owns it, so the close can be delivered before Claude's timeout.
 ARM_PID=
 CLOSED_ARM_PID=
 PARK_BOUNDARY=0
@@ -411,7 +415,8 @@ run_arm() {  # <output file, or empty for none>
 # successor receives the closed arm's pid as FM_WATCH_PREDECESSOR_ARM_PID; it
 # must outlive this hook's exit, so it is detached three ways: nohup, stdio
 # away from the hook's pipes, and its own process group. Its one status line
-# is awaited within the arm's own confirmation budget plus slack. Sets
+# is awaited within the arm's own confirmation budget plus slack, capped by
+# the remaining hook budget with a fixed commit margin. Sets
 # SUCCESSOR_FAILURE to the banner line for an unconfirmed successor.
 SUCCESSOR_FAILURE=
 start_handling_successor() {  # <closed-arm-pid>

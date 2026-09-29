@@ -799,6 +799,85 @@ test_single_flight_admits_exactly_one_owner() {
 # timeout expires. The hook owner must turn that TERM into the same durable,
 # rewake-triggering failure handoff as any other exhausted arm failure; leaving
 # the generation at `arming` cannot recover without a later manual turn.
+# A quiet park: the arm confirms a started watcher and never closes, like an
+# idle home whose no-change heartbeats are absorbed. --stop records itself and
+# publishes the downtime generation the way a stopped real watcher does.
+# <dir> [afk]: with afk, away mode appears while the arm is parked.
+write_quiet_park_arm() {
+  local dir=$1 afk=${2:-}
+  cat > "$dir/bin/fm-watch-arm.sh" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = --stop ]; then
+  echo "$$" >> "$FM_HOME/state/arm-stopped"
+  printf 'pending:downtime:fixture-generation\n' > "$FM_HOME/state/.watcher-down"
+  printf 'watcher: stopped pid=%s\n' "$$"
+  exit 0
+fi
+if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then
+  printf 'arm=%s predecessor=%s\n' "$$" "$FM_WATCH_PREDECESSOR_ARM_PID" >> "$FM_HOME/state/successor-ran"
+  printf 'watcher: started pid=%s (beacon fresh)\n' "$$"
+  exit 0
+fi
+echo "$$" >> "$FM_HOME/state/arm-ran"
+touch "$FM_HOME/state/.last-watcher-beat"
+printf 'watcher: started pid=%s (beacon fresh)\n' "$$"
+SH
+  [ "$afk" != afk ] || printf ': > "$FM_HOME/state/.afk"\n' >> "$dir/bin/fm-watch-arm.sh"
+  printf 'while :; do sleep 0.05; done\n' >> "$dir/bin/fm-watch-arm.sh"
+  chmod +x "$dir/bin/fm-watch-arm.sh"
+}
+
+# Issue #5718: Claude drops the exit 2 of a hook it terminated at its timeout,
+# so an idle home's quiet park must end itself at the park boundary and be
+# delivered as an ordinary rewake with a covering successor.
+test_quiet_park_renews_at_the_park_boundary() {
+  local dir out status arm_pid
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary")
+  : > "$dir/state/task.meta"
+  write_quiet_park_arm "$dir"
+  out=$(FM_CLAUDE_AUTOARM_PARK_SECONDS=2 FM_CLAUDE_AUTOARM_PARK_POLL=0.1 run_autoarm "$dir" 2>/dev/null); status=$?
+  expect_code 2 "$status" "a park reaching its boundary must exit 2 so Claude rewakes before its timeout"
+  assert_contains "$out" "check: cycle-renewal" "the boundary rewake must carry the renewal line"
+  assert_contains "$out" "bin/fm-wake-drain.sh" "the boundary rewake must direct the drain-first protocol"
+  [ "$(epoch_outcome "$dir")" = rewake ] || fail "boundary must record outcome=rewake, got: $(epoch_outcome "$dir")"
+  assert_present "$dir/state/arm-stopped" "the boundary did not stop this home's watcher"
+  arm_pid=$(head -n 1 "$dir/state/arm-ran")
+  ! kill -0 "$arm_pid" 2>/dev/null || fail "the parked arm outlived the boundary"
+  assert_contains "$(cat "$dir/state/successor-ran" 2>/dev/null)" "predecessor=$arm_pid" \
+    "the renewal turn must be covered by a successor linked to the parked arm"
+  [ "$(wc -l < "$dir/state/arm-ran" | tr -d ' ')" = 1 ] || fail "the boundary must not retry the foreground arm"
+  pass "auto-arm: a quiet park renews itself at the park boundary with one rewake and a covering successor"
+}
+
+test_park_boundary_rejects_values_at_or_past_the_registration() {
+  local dir out hook_pid status=0
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-invalid")
+  : > "$dir/state/task.meta"
+  write_quiet_park_arm "$dir"
+  out="$dir/state/autoarm.out"
+  FM_CLAUDE_AUTOARM_PARK_SECONDS=28800 FM_CLAUDE_AUTOARM_PARK_POLL=0.1 run_autoarm_bg "$dir" "$out"
+  sleep 3
+  [ ! -e "$dir/state/arm-stopped" ] || fail "a boundary at the 28800-second registration must fall back to the default"
+  hook_pid=$(epoch_field "$dir" owner_pid)
+  [ -n "$hook_pid" ] || fail "auto-arm did not publish its generation owner"
+  kill -TERM "$hook_pid" 2>/dev/null || fail "could not TERM the parked auto-arm owner"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  expect_code 2 "$status" "a TERM before the default boundary keeps the failure translation"
+  pass "auto-arm: a park boundary at or past the registration falls back to the default"
+}
+
+test_park_boundary_under_away_mode_leaves_the_watcher() {
+  local dir out status
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-afk")
+  : > "$dir/state/task.meta"
+  write_quiet_park_arm "$dir" afk
+  out=$(FM_CLAUDE_AUTOARM_PARK_SECONDS=2 FM_CLAUDE_AUTOARM_PARK_POLL=0.1 run_autoarm "$dir" 2>/dev/null); status=$?
+  expect_code 0 "$status" "away mode owns triage, so the boundary must not rewake"
+  assert_not_contains "$out" "cycle-renewal" "away mode must not receive a renewal banner"
+  [ ! -e "$dir/state/arm-stopped" ] || fail "the boundary stopped a watcher away mode owns"
+  pass "auto-arm: under away mode the park boundary neither stops the watcher nor rewakes"
+}
+
 test_term_mid_arm_commits_failure_and_rewakes() {
   local dir out hook_pid i status=0
   dir=$(make_primary_dir "$TMP_ROOT/term-mid-arm")
@@ -1663,6 +1742,9 @@ test_owner_mutex_contention_preserves_failure_episode_reset
 test_arms_for_x_mode_poll_need_without_inflight
 test_arms_for_registered_custom_check_without_inflight
 test_single_flight_admits_exactly_one_owner
+test_quiet_park_renews_at_the_park_boundary
+test_park_boundary_rejects_values_at_or_past_the_registration
+test_park_boundary_under_away_mode_leaves_the_watcher
 test_term_mid_arm_commits_failure_and_rewakes
 test_abandoned_owner_claim_is_reclaimed_and_rearms
 test_abandoned_claim_reclaim_reaps_dead_steal_without_nesting

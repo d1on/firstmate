@@ -383,8 +383,9 @@ Fresh `failed` and `failed-suppressed` outcomes enter or advance the failure pro
 The auto-arm itself rechecks the healthy watcher predicate and retries a bounded number of times before reporting a genuine failure.
 
 The foreground arm legitimately follows a healthy watcher until its next wake.
-The hook therefore catches HUP, TERM, and INT from host timeout or teardown and commits the ordinary durable failed outcome and failure-notice marker before exiting 2 for a recovery turn.
-Claude drops that exit 2 when it terminated the hook at the configured timeout itself, so a park that outlives the timeout ends without a rewake (`bin/fm-claude-stop-autoarm.sh` header).
+Claude drops the exit 2 of a hook it terminated at the configured timeout, and an idle home's no-change heartbeats never close the park, so the hook ends a quiet park itself at its park boundary, below the registered timeout.
+There it stops the home's watcher, starts a handling successor, and delivers one no-event `check: cycle-renewal` rewake; that short turn's end arms the next bounded park (`bin/fm-claude-stop-autoarm.sh` header owns the boundary and its tunable).
+The hook also catches HUP, TERM, and INT from host timeout or teardown and commits the ordinary durable failed outcome and failure-notice marker before exiting 2 for a recovery turn, as defense in depth for an interruption the boundary did not pre-empt.
 
 The first fresh exhausted-failure epoch preserves its handoff without consuming a blocked-stop count.
 Later fresh failed epochs advance the same monotonic progression instead of resetting it.

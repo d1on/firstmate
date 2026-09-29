@@ -906,34 +906,36 @@ test_renewal_caps_unconfirmed_successor_wait() {
 }
 
 test_superseded_park_boundary_stays_silent() {
-  local dir out status=0 arm_pid watcher identity i
+  local dir out status=0 arm_pid watcher i
   dir=$(make_primary_dir "$TMP_ROOT/park-boundary-superseded")
   : > "$dir/state/task.meta"
-  sleep 60 &
-  watcher=$!
-  identity=$(watcher_identity "$dir" "$watcher") || fail "could not identify the current watcher's pid"
-  record_watcher_lock "$dir" "$watcher" "$identity"
-  touch "$dir/state/.last-watcher-beat"
-  # Attached arms do not forward TERM to their watcher; only the arm belongs
-  # to the old generation. The current owner's watcher must remain intact.
+  # A started arm owns its watcher as a child, like bin/fm-watch-arm.sh: TERM
+  # ends the arm and forwards to that watcher, while USR1 releases the arm and
+  # leaves the watcher running for the newer generation that may follow it.
   cat > "$dir/bin/fm-watch-arm.sh" <<'SH'
 #!/usr/bin/env bash
 if [ "${1:-}" = --stop-if-watcher ]; then echo stopped >> "$FM_HOME/state/arm-stopped"; exit 0; fi
 if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then echo successor >> "$FM_HOME/state/successor-ran"; exit 0; fi
+sleep 60 >/dev/null 2>&1 &
+watcher=$!
+trap 'kill -TERM "$watcher" 2>/dev/null || true; wait "$watcher" 2>/dev/null || true; exit 143' TERM
+trap 'exit 138' USR1
+printf '%s\n' "$watcher" > "$FM_HOME/state/fixture-watcher"
 echo "$$" >> "$FM_HOME/state/arm-ran"
-printf 'watcher: attached pid=%s (beacon fresh)\n' "$(cat "$FM_HOME/state/.watch.lock/pid")"
-trap 'exit 143' TERM
+printf 'watcher: started pid=%s (beacon fresh)\n' "$watcher"
 while :; do sleep 0.05; done
 SH
   chmod +x "$dir/bin/fm-watch-arm.sh"
   echo 0 > "$dir/state/park-clock"
   FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
   for ((i=0; i<100; i++)); do
-    [ -s "$dir/state/arm-ran" ] && break
+    [ -s "$dir/state/arm-ran" ] && [ -s "$dir/state/fixture-watcher" ] && break
     sleep 0.05
   done
   assert_present "$dir/state/arm-ran" "the superseded quiet park never started"
   arm_pid=$(head -n 1 "$dir/state/arm-ran")
+  watcher=$(cat "$dir/state/fixture-watcher")
+  # A newer generation takes ownership and may now follow this watcher.
   printf 'epoch=999 owner_pid=1 outcome=arming updated_at=%s\nfixture-superseder-identity\n' "$(date +%s)" > "$dir/state/.claude-autoarm-epoch"
   echo 27000 > "$dir/state/park-clock"
   wait "$RUN_AUTOARM_BG_PID" || status=$?
@@ -941,13 +943,12 @@ SH
   expect_code 0 "$status" "a superseded boundary must close silently"
   [ -z "$out" ] || fail "a superseded boundary emitted a wake: $out"
   ! kill -0 "$arm_pid" 2>/dev/null || fail "a superseded arm outlived its hook"
-  kill -0 "$watcher" 2>/dev/null || fail "a superseded arm stopped the current watcher's cycle"
+  kill -0 "$watcher" 2>/dev/null || fail "a superseded firing's arm TERM stopped the watcher a newer generation follows"
   [ ! -e "$dir/state/arm-stopped" ] || fail "a superseded boundary stopped the current watcher's cycle"
   [ ! -e "$dir/state/successor-ran" ] || fail "a superseded boundary started a handling successor"
   [ "$(epoch_field "$dir" owner_pid)" = 1 ] || fail "a superseded boundary changed the current generation"
   kill "$watcher" 2>/dev/null || true
-  wait "$watcher" 2>/dev/null || true
-  pass "auto-arm: a superseded boundary reaps its arm without stopping or replacing the current cycle"
+  pass "auto-arm: a superseded boundary reaps its arm without stopping the watcher a newer generation follows"
 }
 
 test_park_boundary_reaps_term_resistant_arm_before_deadline() {

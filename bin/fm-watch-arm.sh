@@ -86,10 +86,17 @@
 # "watcher: none running" and exits 0, or exits 1 when the watcher outlived
 # the stop.
 #
-# --stop-if-watcher PID IDENTITY: the same home-scoped stop, but only when
-# this home's lock still names that watcher pid and its identity matches.
-# A different watcher is left untouched, so a superseded park boundary cannot
-# stop its successor's cycle.
+# --stop-if-watcher PID IDENTITY: --stop bound to one cycle. It stops the
+# lock holder only when the lock still names PID with that recorded identity,
+# and otherwise exits 0 without touching a newer cycle (the Claude Stop hook's
+# park boundary, bin/fm-claude-stop-autoarm.sh).
+#
+# Release: HUP, TERM, and INT end an arm and the watcher it started together.
+# USR1 instead releases the cycle: the arm records "arm-released" in the cycle
+# ledger and exits 128 plus the platform's USR1 number without signalling its
+# watcher, which keeps running as this home's singleton. An owner that lost
+# ownership of a cycle another arm may now follow uses it to reap only its own
+# arm (bin/fm-claude-stop-autoarm.sh, a superseded generation).
 #
 # A copy of this script living under a disposable no-mistakes validation
 # checkout (a path containing /.no-mistakes/worktrees/) refuses every mode
@@ -146,6 +153,8 @@ ATTACH_POLL=${FM_ARM_ATTACH_POLL:-0.5}
 # attached arm follows a slow holder up to it (attach_and_wait).
 STALL_BOUND=$(fm_watcher_stall_bound)
 CYCLE_LOG="$STATE/.watch-cycle-exits.log"
+# Exit status of an arm released by USR1 (128 plus the platform signal number).
+RELEASE_RC=$((128 + $(kill -l USR1)))
 CYCLE_LOG_LOCK="$STATE/.watch-cycle-exits.lock"
 CYCLE_LOG_MAX_BYTES=${FM_WATCH_CYCLE_LOG_MAX_BYTES:-262144}
 CYCLE_LOG_KEEP_LINES=${FM_WATCH_CYCLE_LOG_KEEP_LINES:-1000}
@@ -438,15 +447,17 @@ attach_and_wait() {
 
 # shellcheck disable=SC2329 # Invoked indirectly by the signal traps below.
 handle_attached_signal() {
-  local signal=$1 rc=$2
-  trap - HUP TERM INT
-  cycle_log_append "$rc" "$signal" arm-interrupted none
+  local signal=$1 rc=$2 reason=arm-interrupted
+  trap - HUP TERM INT USR1
+  [ "$signal" != USR1 ] || reason=arm-released
+  cycle_log_append "$rc" "$signal" "$reason" none
   exit "$rc"
 }
 
 trap 'handle_attached_signal HUP 129' HUP
 trap 'handle_attached_signal TERM 143' TERM
 trap 'handle_attached_signal INT 130' INT
+trap 'handle_attached_signal USR1 "$RELEASE_RC"' USR1
 
 watch_output_has_wake() {
   local out=$1
@@ -655,7 +666,7 @@ cleanup_child() {
 # shellcheck disable=SC2329 # Invoked indirectly by the signal traps below.
 handle_arm_signal() {
   local signal=$1 rc=$2
-  trap - HUP TERM INT
+  trap - HUP TERM INT USR1
   if [ -n "$child" ] && fm_pid_alive "$child"; then
     # The watcher installs its own cleanup traps only after acquiring and
     # publishing the home-bound lock identity. Do not TERM it in the middle of
@@ -680,6 +691,18 @@ handle_arm_signal() {
 trap 'handle_arm_signal HUP 129' HUP
 trap 'handle_arm_signal TERM 143' TERM
 trap 'handle_arm_signal INT 130' INT
+trap handle_arm_release USR1
+
+# USR1 releases the cycle instead of ending it (header, "Release"): the arm
+# exits without signalling the watcher it started, which keeps running as this
+# home's singleton for whichever arm now follows it.
+# shellcheck disable=SC2329 # Invoked indirectly by the signal trap above.
+handle_arm_release() {
+  trap - HUP TERM INT USR1
+  cycle_log_append "$RELEASE_RC" USR1 arm-released none
+  [ -z "$child_out" ] || rm -f "$child_out" 2>/dev/null || true
+  exit "$RELEASE_RC"
+}
 
 child_out=$(mktemp "$STATE/.watch-arm-output.XXXXXX") || {
   echo "watcher: FAILED - no live watcher with a fresh beacon"
@@ -801,7 +824,7 @@ while :; do
   sleep 0.2
 done
 
-trap - HUP TERM INT
+trap - HUP TERM INT USR1
 print_watch_output "$child_out"
 cleanup_child
 wait "$child" 2>/dev/null

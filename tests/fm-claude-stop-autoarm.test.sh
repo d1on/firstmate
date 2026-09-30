@@ -834,6 +834,11 @@ FM_STATE_OVERRIDE="$FM_HOME/state" bash -c '. "$1"; fm_pid_identity "$2"' _ "$FM
 touch "$FM_HOME/state/.last-watcher-beat"
 printf 'watcher: started pid=%s (beacon fresh)\n' "$$"
 SH
+  if [ "${2:-}" = reason-on-term ]; then
+    cat >> "$dir/bin/fm-watch-arm.sh" <<'SH'
+trap 'printf "signal: fixture-boundary-event\n"; exit 143' TERM
+SH
+  fi
   printf 'if [ -e "$FM_HOME/state/fixture-ignore-term" ]; then trap "" TERM; fi\nwhile :; do sleep 0.05; done\n' >> "$dir/bin/fm-watch-arm.sh"
   chmod +x "$dir/bin/fm-watch-arm.sh"
 }
@@ -867,6 +872,29 @@ test_quiet_park_renews_at_the_park_boundary() {
     "the renewal turn must be covered by a successor linked to the parked arm"
   [ "$(wc -l < "$dir/state/arm-ran" | tr -d ' ')" = 1 ] || fail "the boundary must not retry the foreground arm"
   pass "auto-arm: a quiet park renews itself at the park boundary with one rewake and a covering successor"
+}
+
+test_boundary_real_event_has_no_renewal_label() {
+  local dir out status=0
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-real-event")
+  : > "$dir/state/task.meta"
+  write_quiet_park_arm "$dir" reason-on-term
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/.watch.lock/pid-identity" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/.watch.lock/pid-identity" "the event-bearing quiet park never started"
+  echo 27000 > "$dir/state/park-clock"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
+  expect_code 2 "$status" "a real event closing at the boundary must still rewake"
+  assert_contains "$out" "signal: fixture-boundary-event" "the boundary lost the watcher event"
+  assert_not_contains "$out" "check: cycle-renewal" "an event-bearing close is not a no-event renewal"
+  assert_present "$dir/state/successor-ran" "the real event did not start a covering successor"
+  [ "$(epoch_outcome "$dir")" = rewake ] || fail "the event-bearing close did not commit a rewake"
+  pass "auto-arm: a boundary close carrying a real event is not labelled no-event"
 }
 
 test_renewal_caps_unconfirmed_successor_wait() {
@@ -1821,6 +1849,7 @@ test_arms_for_x_mode_poll_need_without_inflight
 test_arms_for_registered_custom_check_without_inflight
 test_single_flight_admits_exactly_one_owner
 test_quiet_park_renews_at_the_park_boundary
+test_boundary_real_event_has_no_renewal_label
 test_renewal_caps_unconfirmed_successor_wait
 test_park_boundary_reaps_term_resistant_arm_before_deadline
 test_park_clock_requires_the_test_marker

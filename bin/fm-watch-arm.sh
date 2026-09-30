@@ -530,7 +530,10 @@ STOPPED_PID=
 stop_home_watcher() {
   local lock_pid i
   lock_pid=$(cat "$WATCH_LOCK/pid" 2>/dev/null || true)
-  [ -z "$stop_watcher_pid" ] || [ "$lock_pid" = "$stop_watcher_pid" ] || return 0
+  if [ -n "$stop_watcher_pid" ]; then
+    [ "$lock_pid" = "$stop_watcher_pid" ] || return 0
+    [ "$(cat "$WATCH_LOCK/pid-identity" 2>/dev/null || true)" = "$stop_watcher_identity" ] || return 0
+  fi
   fm_pid_alive "$lock_pid" || return 0
   if fm_watcher_lock_matches_pid "$STATE" "$WATCH" "$lock_pid" "$FM_HOME"; then
     [ -z "$stop_watcher_pid" ] || [ "$FM_WATCHER_MATCHED_IDENTITY" = "$stop_watcher_identity" ] || return 0
@@ -541,6 +544,8 @@ stop_home_watcher() {
       i=$((i + 1))
     done
     STOPPED_PID=$lock_pid
+  elif [ -n "$stop_watcher_pid" ]; then
+    return 0
   elif ! clear_stale_recorded_watcher_lock; then
     echo "watcher: FAILED - stale watcher recovery state could not be persisted" >&2
     return 1

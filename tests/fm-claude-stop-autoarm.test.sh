@@ -863,6 +863,8 @@ test_quiet_park_renews_at_the_park_boundary() {
   out=$(cat "$dir/state/autoarm.out")
   expect_code 2 "$status" "a park reaching its boundary must exit 2 so Claude rewakes before its timeout"
   assert_contains "$out" "check: cycle-renewal" "the boundary rewake must carry the renewal line"
+  assert_contains "$out" "handle anything the drain presents" "the boundary must not dismiss a queued watcher event"
+  assert_not_contains "$out" "cycle-renewal - no event" "the boundary cannot establish that the wake queue is empty"
   assert_contains "$out" "bin/fm-wake-drain.sh" "the boundary rewake must direct the drain-first protocol"
   [ "$(epoch_outcome "$dir")" = rewake ] || fail "boundary must record outcome=rewake, got: $(epoch_outcome "$dir")"
   assert_present "$dir/state/arm-stopped" "the boundary did not stop this home's watcher"

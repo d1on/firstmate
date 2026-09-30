@@ -52,8 +52,9 @@
 #     registration, measured from this firing's start and shared by its retries)
 #     it TERMs the arm and conditionally stops only the identity-matched
 #     watcher from this cycle through bin/fm-watch-arm.sh --stop-if-watcher.
-#     It delivers one "check: cycle-renewal" line through the ordinary
-#     actionable path below: a handling successor covers the short renewal
+#     When no actionable reason reached the hook output, it delivers a
+#     "check: cycle-renewal" line through the ordinary actionable path below:
+#     a handling successor covers the short renewal
 #     turn, and that turn's end arms a fresh bounded park. Successor
 #     confirmation cannot wait beyond 28770 seconds elapsed from the firing's
 #     start, leaving time to commit the rewake before the hook timeout even
@@ -372,7 +373,7 @@ park_elapsed() {
   fi
   printf '%s\n' $(( $(date +%s) - HOOK_STARTED ))
 }
-RENEWAL_LINE='check: cycle-renewal - no event: the Stop hook ended this quiet watcher cycle before its hook timeout; drain, acknowledge, and end the turn, and the next cycle arms on its own'
+RENEWAL_LINE='check: cycle-renewal - the Stop hook ended this watcher cycle at its park boundary before the hook timeout; drain, handle anything the drain presents, acknowledge, and end the turn; the next cycle arms on its own'
 # Reap our arm within the renewal budget; never let its wait consume Claude's
 # timeout. TERM ends the arm and the watcher it started, and may not complete
 # while the arm waits for that watcher. KILL cannot reach the watcher.

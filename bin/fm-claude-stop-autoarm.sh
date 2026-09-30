@@ -594,7 +594,9 @@ if [ "$ACTIONABLE" -eq 1 ]; then
       [ -n "$OUT" ] && awk '/^supervision-host:/ { print; next } /^(signal:|stale:|check:|heartbeat)/ && shown++ < 8' "$OUT" 2>/dev/null
     else
       [ -n "$OUT" ] && grep -E '^(signal:|stale:|check:|heartbeat)' "$OUT" 2>/dev/null | head -8
-      [ "$PARK_BOUNDARY" -eq 0 ] || printf '%s\n' "$RENEWAL_LINE"
+      if [ "$PARK_BOUNDARY" -eq 1 ] && { [ -z "$OUT" ] || ! grep -Eq "$ACTIONABLE_RE" "$OUT" 2>/dev/null; }; then
+        printf '%s\n' "$RENEWAL_LINE"
+      fi
     fi
     if [ "$HOST_MODE" -eq 1 ] && [ -e "$STATE/.afk-contract" ] \
       && [ "$(FM_STATE_OVERRIDE="$STATE" "$SCRIPT_DIR/fm-afk-contract.sh" mode 2>/dev/null)" != quiet ]; then

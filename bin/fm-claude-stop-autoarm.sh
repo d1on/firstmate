@@ -51,10 +51,7 @@
 #     registered timeout. After 27000 seconds (below the tracked 28800-second
 #     registration, measured from this firing's start and shared by its retries)
 #     it TERMs the arm and conditionally stops only the identity-matched
-#     watcher from this cycle through bin/fm-watch-arm.sh --stop-if-watcher
-#     (unless away mode now owns it). A superseded generation releases its own
-#     arm without signalling the watcher a newer generation may follow, and
-#     exits silently.
+#     watcher from this cycle through bin/fm-watch-arm.sh --stop-if-watcher.
 #     It delivers one "check: cycle-renewal" line through the ordinary
 #     actionable path below: a handling successor covers the short renewal
 #     turn, and that turn's end arms a fresh bounded park. Successor
@@ -357,9 +354,9 @@ trap 'handle_autoarm_signal INT' INT
 # Every non-actionable close is checked against the same identity-matched live
 # watcher and fresh-beacon predicate used by the turn-end guard before it is
 # retried or translated into an operator-visible failure.
-# The wait is bounded by the park boundary (header): only the current owner
-# TERMs its arm and conditionally stops its identity-matched watcher unless
-# away mode owns it, so the close can be delivered before Claude's timeout.
+# The wait is bounded by the park boundary (header): the hook TERMs its arm
+# and conditionally stops its identity-matched watcher so the close can be
+# delivered before Claude's timeout.
 ARM_PID=
 CLOSED_ARM_PID=
 PARK_BOUNDARY=0
@@ -377,13 +374,11 @@ park_elapsed() {
 }
 RENEWAL_LINE='check: cycle-renewal - no event: the Stop hook ended this quiet watcher cycle before its hook timeout; drain, acknowledge, and end the turn, and the next cycle arms on its own'
 # Reap our arm within the renewal budget; never let its wait consume Claude's
-# timeout. TERM (the default) ends the arm and the watcher it started, and may
-# not complete while the arm waits for that watcher. USR1 releases the arm
-# without signalling its watcher (bin/fm-watch-arm.sh header, "Release"). KILL,
-# the fallback for both, never reaches the watcher either.
-stop_own_arm() {  # [TERM|USR1]
+# timeout. TERM ends the arm and the watcher it started, and may not complete
+# while the arm waits for that watcher. KILL cannot reach the watcher.
+stop_own_arm() {
   local deadline=$(( $(date +%s) + 5 ))
-  kill "-${1:-TERM}" "$ARM_PID" 2>/dev/null || true
+  kill -TERM "$ARM_PID" 2>/dev/null || true
   while fm_pid_alive "$ARM_PID" && [ "$(date +%s)" -lt "$deadline" ] \
     && [ "$(park_elapsed)" -lt 28770 ]; do
     sleep 0.1
@@ -402,18 +397,6 @@ run_arm() {  # <output file, or empty for none>
   ARM_PID=$!
   while fm_pid_alive "$ARM_PID"; do
     if [ "$(park_elapsed)" -ge "$PARK_SECONDS" ]; then
-      if [ -e "$STATE/.afk" ]; then
-        # Away mode owns this watcher and the arm supervising it.
-        ARM_PID=
-        return
-      fi
-      if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
-        # A newer generation owns supervision and may follow the watcher our
-        # arm started, so reap only the arm and leave that watcher running.
-        stop_own_arm USR1
-        ARM_PID=
-        return
-      fi
       PARK_BOUNDARY=1
       if [ -n "$1" ]; then
         BOUNDARY_WATCHER_PID=$(awk '/^watcher: (started|attached) pid=[0-9]+/ { split($3, p, "="); pid=p[2] } END { print pid }' "$1" 2>/dev/null)
@@ -429,8 +412,7 @@ run_arm() {  # <output file, or empty for none>
   if [ "$PARK_BOUNDARY" -eq 0 ]; then
     wait "$ARM_PID" || true
   fi
-  if [ "$PARK_BOUNDARY" -eq 1 ] && [ ! -e "$STATE/.afk" ] \
-    && [ -n "$BOUNDARY_WATCHER_IDENTITY" ] && fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
+  if [ "$PARK_BOUNDARY" -eq 1 ] && [ -n "$BOUNDARY_WATCHER_IDENTITY" ]; then
     "$SCRIPT_DIR/fm-watch-arm.sh" --stop-if-watcher "$BOUNDARY_WATCHER_PID" "$BOUNDARY_WATCHER_IDENTITY" >/dev/null 2>&1 || true
   fi
   CLOSED_ARM_PID=$ARM_PID
@@ -510,11 +492,6 @@ while [ "$attempt" -lt "$AUTOARM_ATTEMPTS" ]; do
       "$SCRIPT_DIR/fm-supervision-host.sh" park >"${OUT:-/dev/null}" 2>&1 || HOST_RC=$?
   else
     run_arm "$OUT"
-  fi
-
-  if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
-    [ -z "$OUT" ] || rm -f "$OUT" 2>/dev/null || true
-    exit 0
   fi
 
   # AFK may have appeared mid-cycle: the daemon owns triage now, so suppress

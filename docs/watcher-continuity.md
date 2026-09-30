@@ -483,7 +483,7 @@ It checks that a newly appended keyed decision is classified without rereading e
 - Exit-2 translation.
 - The handling successor an ended attached cycle starts with the closed arm as its predecessor and that outlives the rewake.
 - An unconfirmed successor reported in the banner without withholding the wake.
-- The fixed park boundary's renewal rewake, capped successor wait, superseded-generation silence that releases its own arm without stopping the watcher a newer generation follows, and away-mode stand-down.
+- The fixed park boundary's renewal rewake and capped successor wait.
 - Host-timeout HUP/TERM/INT translation into the same durable failure handoff.
 
 It also covers generation-claim single-flight, stuck-claim supersession, superseded-owner silence, notice-marker refusal and retry, ownership-atomic episode reset, and the legacy upgrade shim.

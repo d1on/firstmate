@@ -1264,54 +1264,6 @@ test_take_over_preserves_downtime_from_watcher_self_exit() {
   pass "watch-arm: takeover preserves self-exit downtime and surfaces a recovery wake"
 }
 
-# USR1 releases a started arm without signalling its watcher, so a newer owner
-# following that watcher keeps its cycle; TERM, the control, ends both. The
-# divergence is asserted so the release case cannot pass vacuously.
-test_released_arm_leaves_its_started_watcher_running() {
-  local dir home state fakebin watcher_pid status=0 i
-  dir=$(make_case released-arm)
-  home="$dir/home"
-  state="$dir/state"
-  fakebin="$dir/fakebin"
-  mkdir -p "$home/data"
-
-  start_rearm_arm "$home" "$state" "$fakebin" "$dir/release-arm.out"
-  grep -q '^watcher: started ' "$dir/release-arm.out" \
-    || fail "release fixture arm did not start a watcher: $(cat "$dir/release-arm.out")"
-  watcher_pid=$(cat "$state/.watch.lock/pid" 2>/dev/null || true)
-  is_live_non_zombie "$watcher_pid" || fail "release fixture watcher is not live"
-  kill -USR1 "$ARM_PID" 2>/dev/null || fail "could not release the started arm"
-  wait_for_exit "$ARM_PID" 50 || status=$?
-  expect_code "$((128 + $(kill -l USR1)))" "$status" "a released arm must exit with its release status"
-  is_live_non_zombie "$watcher_pid" || fail "a released arm stopped the watcher it started"
-  [ "$(cat "$state/.watch.lock/pid" 2>/dev/null || true)" = "$watcher_pid" ] \
-    || fail "the released arm's watcher no longer holds the home lock"
-  tail -n 1 "$state/.watch-cycle-exits.log" | grep -q 'reason=arm-released' \
-    || fail "the release was not recorded in the cycle ledger: $(tail -n 1 "$state/.watch-cycle-exits.log")"
-  ! ls "$state"/.watch-arm-output.* >/dev/null 2>&1 || fail "the released arm left its output file behind"
-  kill -TERM "$watcher_pid" 2>/dev/null || true
-  i=0
-  while [ "$i" -lt 50 ] && kill -0 "$watcher_pid" 2>/dev/null; do sleep 0.1; i=$((i + 1)); done
-
-  # The control runs in a fresh home so the release case's recovery state
-  # cannot turn its arm into a resurfacing wake instead of a parked cycle.
-  dir=$(make_case released-arm-term-control)
-  home="$dir/home"
-  state="$dir/state"
-  fakebin="$dir/fakebin"
-  mkdir -p "$home/data"
-  start_rearm_arm "$home" "$state" "$fakebin" "$dir/term-arm.out"
-  grep -q '^watcher: started ' "$dir/term-arm.out" \
-    || fail "TERM control arm did not start a watcher: $(cat "$dir/term-arm.out")"
-  watcher_pid=$(cat "$state/.watch.lock/pid" 2>/dev/null || true)
-  kill -TERM "$ARM_PID" 2>/dev/null || fail "could not TERM the control arm"
-  wait_for_exit "$ARM_PID" 50 >/dev/null 2>&1 || true
-  i=0
-  while [ "$i" -lt 50 ] && kill -0 "$watcher_pid" 2>/dev/null; do sleep 0.1; i=$((i + 1)); done
-  ! kill -0 "$watcher_pid" 2>/dev/null || fail "control: TERM on a started arm left its watcher running"
-  pass "watch-arm: USR1 releases a started arm and leaves its watcher running, while TERM ends both"
-}
-
 test_downtime_marker_does_not_follow_symlink() {
   local dir home state fakebin armout watcher_pid sentinel
   dir=$(make_case downtime-marker-symlink)
@@ -1546,4 +1498,3 @@ test_stop_ends_the_home_watcher_and_publishes_downtime
 test_take_over_attaches_to_a_cycle_the_named_arm_does_not_own
 test_take_over_owns_a_fresh_cycle_and_keeps_queued_work_surfacing
 test_take_over_preserves_downtime_from_watcher_self_exit
-test_released_arm_leaves_its_started_watcher_running

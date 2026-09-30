@@ -1,0 +1,30 @@
+Isolated Claude primary on private fm-lab socket, after a Stop:
+
+ ▐▛███▛█   Claude Code v2.1.285
+▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/774143b5fc8e/01M3QMKDZ8VANCHTKMJCDH123A
+
+
+❯ Reply exactly READY and stop. Do not run any tools.
+
+⏺ READY
+
+✻ Worked for 4s · done 4:23 AM
+
+
+
+
+
+
+
+
+
+────────────────────────────────────────────────────────────────────────────────
+❯ 
+────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle) · ← 1 agent
+
+Isolated lab state (linked gate worktree is not a primary checkout):
+total 0
+drwxr-xr-x@ 2 dion  staff   64 Sep 30 04:22 .
+drwx------@ 8 dion  staff  256 Sep 30 04:22 ..

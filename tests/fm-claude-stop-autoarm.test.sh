@@ -966,45 +966,53 @@ test_park_boundary_reaps_term_resistant_arm_before_deadline() {
 # firing now follows too, so its boundary must not stop that watcher. The
 # watcher is a real recorded lock holder, so the scoped stop would match it.
 test_superseded_boundary_does_not_stop_the_watcher() {
-  local dir out status=0 watcher identity arm_pid i
+  local dir out status=0 watcher identity hook_pid i
   dir=$(make_primary_dir "$TMP_ROOT/park-boundary-superseded-stop")
   : > "$dir/state/task.meta"
-  sleep 60 >/dev/null 2>&1 &
-  watcher=$!
-  identity=$(watcher_identity "$dir" "$watcher") || fail "could not identify the fixture watcher"
-  record_watcher_lock "$dir" "$watcher" "$identity"
-  touch "$dir/state/.last-watcher-beat"
   cat > "$dir/bin/fm-watch-arm.sh" <<'SH'
 #!/usr/bin/env bash
 if [ "${1:-}" = --stop-if-watcher ]; then echo "$2" >> "$FM_HOME/state/scoped-stop-ran"; exit 0; fi
 if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then echo successor >> "$FM_HOME/state/successor-ran"; exit 0; fi
 echo "$$" >> "$FM_HOME/state/arm-ran"
-printf 'watcher: attached pid=%s (beacon fresh)\n' "$(cat "$FM_HOME/state/.watch.lock/pid")"
-trap 'exit 143' TERM
-while :; do sleep 0.05; done
+sleep 60 >/dev/null 2>&1 &
+watcher=$!
+trap 'kill -TERM "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null; exit 143' TERM
+printf '%s\n' "$watcher" > "$FM_HOME/state/fixture-watcher-pid"
+printf 'watcher: started pid=%s\n' "$watcher"
+while [ ! -e "$FM_HOME/state/close-arm" ]; do sleep 0.05; done
+exit 0
 SH
   chmod +x "$dir/bin/fm-watch-arm.sh"
   echo 0 > "$dir/state/park-clock"
   FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  hook_pid=$RUN_AUTOARM_BG_PID
   for ((i=0; i<100; i++)); do
-    [ -s "$dir/state/arm-ran" ] && break
+    [ -s "$dir/state/fixture-watcher-pid" ] && break
     sleep 0.05
   done
-  assert_present "$dir/state/arm-ran" "the superseded park never started"
-  arm_pid=$(head -n 1 "$dir/state/arm-ran")
+  assert_present "$dir/state/fixture-watcher-pid" "the superseded started arm never started its watcher"
+  watcher=$(cat "$dir/state/fixture-watcher-pid")
+  identity=$(watcher_identity "$dir" "$watcher") || fail "could not identify the fixture watcher"
+  record_watcher_lock "$dir" "$watcher" "$identity"
+  touch "$dir/state/.last-watcher-beat"
   printf 'epoch=999 owner_pid=1 outcome=arming updated_at=%s\nfixture-superseder-identity\n' "$(date +%s)" > "$dir/state/.claude-autoarm-epoch"
-  echo 27000 > "$dir/state/park-clock"
-  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  echo 27001 > "$dir/state/park-clock"
+  # Allow the hook's one-second polling loop to cross the boundary while the
+  # arm stays open. A started arm would forward any boundary TERM to its child.
+  sleep 3
+  kill -0 "$watcher" 2>/dev/null || fail "the started arm forwarded boundary TERM to the shared watcher"
+  [ ! -e "$dir/state/scoped-stop-ran" ] || fail "a superseded boundary issued a scoped watcher stop"
+  kill -0 "$hook_pid" 2>/dev/null || fail "the superseded hook did not wait for its arm's natural close"
+  : > "$dir/state/close-arm"
+  wait "$hook_pid" || status=$?
   out=$(cat "$dir/state/autoarm.out")
-  kill -TERM "$arm_pid" 2>/dev/null || true
   expect_code 0 "$status" "a superseded boundary must close silently"
   [ -z "$out" ] || fail "a superseded boundary emitted a wake: $out"
   [ ! -e "$dir/state/scoped-stop-ran" ] || fail "a superseded boundary stopped the watcher a newer firing follows"
   kill -0 "$watcher" 2>/dev/null || fail "the shared watcher did not survive the superseded boundary"
   [ ! -e "$dir/state/successor-ran" ] || fail "a superseded boundary started a handling successor"
   kill "$watcher" 2>/dev/null || true
-  wait "$watcher" 2>/dev/null || true
-  pass "auto-arm: a superseded boundary does not stop the watcher a newer firing follows"
+  pass "auto-arm: a superseded boundary leaves a started arm and its shared watcher alone until natural close"
 }
 
 test_park_clock_requires_the_test_marker() {

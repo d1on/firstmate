@@ -50,8 +50,11 @@
 #   - Park boundary: the hook therefore ends its own plain park before the
 #     registered timeout. After 27000 seconds (below the tracked 28800-second
 #     registration, measured from this firing's start and shared by its retries)
-#     it TERMs the arm and, while this generation still owns supervision,
-#     stops only the identity-matched watcher from this cycle through
+#     it TERMs the arm, waits at most five seconds or until 28770 seconds
+#     elapsed, then KILLs and reaps an arm that remains alive. A started arm
+#     forwards TERM to its watcher; an attached arm does not. While this
+#     generation still owns supervision, the hook additionally requests an
+#     identity-scoped stop of this cycle through
 #     bin/fm-watch-arm.sh --stop-if-watcher.
 #     When no actionable reason reached the hook output, it delivers a
 #     "check: cycle-renewal" line through the ordinary actionable path below:
@@ -98,9 +101,9 @@
 #     the harness delivers the collected stderr only on exit 2, so an owned
 #     terminal commit decides the exit. Markerless outcomes commit with the
 #     ledger write; the failure notice additionally requires its marker write.
-#     A refused generation exits 0 silently even after printing. A close that
-#     reports no actionable reason is benign when a live identity-matched
-#     watcher still has a fresh beacon.
+#     A refused generation exits 0 silently even after printing. Outside the
+#     park boundary, a close that reports no actionable reason is benign when
+#     a live identity-matched watcher still has a fresh beacon.
 #   - Failure handling: a typed failure is rechecked against the same live,
 #     fresh watcher predicate and retried a bounded number of times in this
 #     hook. Only an exhausted failure with no verified watcher emits one
@@ -414,8 +417,9 @@ run_arm() {  # <output file, or empty for none>
   if [ "$PARK_BOUNDARY" -eq 0 ]; then
     wait "$ARM_PID" || true
   fi
-  # Only the generation that still owns supervision stops the watcher: a
-  # superseded firing's watcher may now be the one a newer firing follows.
+  # Gate this explicit scoped stop on generation ownership; a superseded
+  # firing's watcher may now be the one a newer firing follows. This does not
+  # gate the earlier TERM that a started arm forwards to its watcher.
   if [ "$PARK_BOUNDARY" -eq 1 ] && [ -n "$BOUNDARY_WATCHER_IDENTITY" ] \
     && fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
     "$SCRIPT_DIR/fm-watch-arm.sh" --stop-if-watcher "$BOUNDARY_WATCHER_PID" "$BOUNDARY_WATCHER_IDENTITY" >/dev/null 2>&1 || true

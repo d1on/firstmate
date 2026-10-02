@@ -1,0 +1,18 @@
+Running actual fm-watch-arm / fm-watch in marked disposable home
+Wrong PID scoped stop:
+watcher: none running
+original watcher alive
+
+Wrong identity scoped stop:
+watcher: none running
+original watcher alive
+lock identity unchanged: yes
+No downtime published: yes
+
+Matching cycle scoped stop:
+watcher: stopped pid=23088
+arm rc=143
+
+Arm output:
+watcher: started pid=23088 (beacon fresh)
+watcher: FAILED - watcher cycle exited 143 without an actionable reason

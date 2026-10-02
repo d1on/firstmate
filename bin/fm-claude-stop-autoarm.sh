@@ -50,9 +50,10 @@
 #   - Park boundary: the hook therefore ends its own plain park before the
 #     registered timeout. After 27000 seconds (below the tracked 28800-second
 #     registration, measured from this firing's start and shared by its retries)
-#     it TERMs the arm, waits at most five seconds or until 28770 seconds
-#     elapsed, then KILLs and reaps an arm that remains alive. A started arm
-#     forwards TERM to its watcher; an attached arm does not. While this
+#     the owning firing TERMs the arm, waits at most five seconds or until
+#     28770 seconds elapsed, then KILLs and reaps an arm that remains alive.
+#     A superseded firing leaves its arm and watcher alone until the arm closes.
+#     A started arm forwards TERM to its watcher; an attached arm does not. While this
 #     generation still owns supervision, the hook additionally requests an
 #     identity-scoped stop of this cycle through
 #     bin/fm-watch-arm.sh --stop-if-watcher.
@@ -359,9 +360,9 @@ trap 'handle_autoarm_signal INT' INT
 # Every non-actionable close is checked against the same identity-matched live
 # watcher and fresh-beacon predicate used by the turn-end guard before it is
 # retried or translated into an operator-visible failure.
-# The wait is bounded by the park boundary (header): the hook TERMs its arm
-# and conditionally stops its identity-matched watcher so the close can be
-# delivered before Claude's timeout.
+# The owning firing bounds its wait at the park boundary (header): it TERMs
+# its arm and conditionally stops its identity-matched watcher so the close
+# can be delivered before Claude's timeout.
 ARM_PID=
 CLOSED_ARM_PID=
 PARK_BOUNDARY=0
@@ -402,6 +403,9 @@ run_arm() {  # <output file, or empty for none>
   ARM_PID=$!
   while fm_pid_alive "$ARM_PID"; do
     if [ "$(park_elapsed)" -ge "$PARK_SECONDS" ]; then
+      if ! fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
+        break
+      fi
       PARK_BOUNDARY=1
       if [ -n "$1" ]; then
         BOUNDARY_WATCHER_PID=$(awk '/^watcher: (started|attached) pid=[0-9]+/ { split($3, p, "="); pid=p[2] } END { print pid }' "$1" 2>/dev/null)
@@ -418,8 +422,8 @@ run_arm() {  # <output file, or empty for none>
     wait "$ARM_PID" || true
   fi
   # Gate this explicit scoped stop on generation ownership; a superseded
-  # firing's watcher may now be the one a newer firing follows. This does not
-  # gate the earlier TERM that a started arm forwards to its watcher.
+  # firing's watcher may now be the one a newer firing follows. Recheck in
+  # case ownership changed while the boundary waited for arm termination.
   if [ "$PARK_BOUNDARY" -eq 1 ] && [ -n "$BOUNDARY_WATCHER_IDENTITY" ] \
     && fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
     "$SCRIPT_DIR/fm-watch-arm.sh" --stop-if-watcher "$BOUNDARY_WATCHER_PID" "$BOUNDARY_WATCHER_IDENTITY" >/dev/null 2>&1 || true

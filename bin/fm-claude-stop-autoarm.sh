@@ -50,8 +50,9 @@
 #   - Park boundary: the hook therefore ends its own plain park before the
 #     registered timeout. After 27000 seconds (below the tracked 28800-second
 #     registration, measured from this firing's start and shared by its retries)
-#     it TERMs the arm and conditionally stops only the identity-matched
-#     watcher from this cycle through bin/fm-watch-arm.sh --stop-if-watcher.
+#     it TERMs the arm and, while this generation still owns supervision,
+#     stops only the identity-matched watcher from this cycle through
+#     bin/fm-watch-arm.sh --stop-if-watcher.
 #     When no actionable reason reached the hook output, it delivers a
 #     "check: cycle-renewal" line through the ordinary actionable path below:
 #     a handling successor covers the short renewal
@@ -413,7 +414,10 @@ run_arm() {  # <output file, or empty for none>
   if [ "$PARK_BOUNDARY" -eq 0 ]; then
     wait "$ARM_PID" || true
   fi
-  if [ "$PARK_BOUNDARY" -eq 1 ] && [ -n "$BOUNDARY_WATCHER_IDENTITY" ]; then
+  # Only the generation that still owns supervision stops the watcher: a
+  # superseded firing's watcher may now be the one a newer firing follows.
+  if [ "$PARK_BOUNDARY" -eq 1 ] && [ -n "$BOUNDARY_WATCHER_IDENTITY" ] \
+    && fm_autoarm_still_owner "$STATE" "$MY_GEN"; then
     "$SCRIPT_DIR/fm-watch-arm.sh" --stop-if-watcher "$BOUNDARY_WATCHER_PID" "$BOUNDARY_WATCHER_IDENTITY" >/dev/null 2>&1 || true
   fi
   CLOSED_ARM_PID=$ARM_PID

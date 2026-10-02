@@ -962,6 +962,51 @@ test_park_boundary_reaps_term_resistant_arm_before_deadline() {
   pass "auto-arm: a TERM-resistant arm cannot exhaust the renewal budget"
 }
 
+# A firing superseded during its park may be following the watcher a newer
+# firing now follows too, so its boundary must not stop that watcher. The
+# watcher is a real recorded lock holder, so the scoped stop would match it.
+test_superseded_boundary_does_not_stop_the_watcher() {
+  local dir out status=0 watcher identity arm_pid i
+  dir=$(make_primary_dir "$TMP_ROOT/park-boundary-superseded-stop")
+  : > "$dir/state/task.meta"
+  sleep 60 >/dev/null 2>&1 &
+  watcher=$!
+  identity=$(watcher_identity "$dir" "$watcher") || fail "could not identify the fixture watcher"
+  record_watcher_lock "$dir" "$watcher" "$identity"
+  touch "$dir/state/.last-watcher-beat"
+  cat > "$dir/bin/fm-watch-arm.sh" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = --stop-if-watcher ]; then echo "$2" >> "$FM_HOME/state/scoped-stop-ran"; exit 0; fi
+if [ -n "${FM_WATCH_PREDECESSOR_ARM_PID:-}" ]; then echo successor >> "$FM_HOME/state/successor-ran"; exit 0; fi
+echo "$$" >> "$FM_HOME/state/arm-ran"
+printf 'watcher: attached pid=%s (beacon fresh)\n' "$(cat "$FM_HOME/state/.watch.lock/pid")"
+trap 'exit 143' TERM
+while :; do sleep 0.05; done
+SH
+  chmod +x "$dir/bin/fm-watch-arm.sh"
+  echo 0 > "$dir/state/park-clock"
+  FM_TEST_CLAUDE_AUTOARM_CLOCK="$dir/state/park-clock" run_autoarm_bg "$dir" "$dir/state/autoarm.out"
+  for ((i=0; i<100; i++)); do
+    [ -s "$dir/state/arm-ran" ] && break
+    sleep 0.05
+  done
+  assert_present "$dir/state/arm-ran" "the superseded park never started"
+  arm_pid=$(head -n 1 "$dir/state/arm-ran")
+  printf 'epoch=999 owner_pid=1 outcome=arming updated_at=%s\nfixture-superseder-identity\n' "$(date +%s)" > "$dir/state/.claude-autoarm-epoch"
+  echo 27000 > "$dir/state/park-clock"
+  wait "$RUN_AUTOARM_BG_PID" || status=$?
+  out=$(cat "$dir/state/autoarm.out")
+  kill -TERM "$arm_pid" 2>/dev/null || true
+  expect_code 0 "$status" "a superseded boundary must close silently"
+  [ -z "$out" ] || fail "a superseded boundary emitted a wake: $out"
+  [ ! -e "$dir/state/scoped-stop-ran" ] || fail "a superseded boundary stopped the watcher a newer firing follows"
+  kill -0 "$watcher" 2>/dev/null || fail "the shared watcher did not survive the superseded boundary"
+  [ ! -e "$dir/state/successor-ran" ] || fail "a superseded boundary started a handling successor"
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  pass "auto-arm: a superseded boundary does not stop the watcher a newer firing follows"
+}
+
 test_park_clock_requires_the_test_marker() {
   local dir hook_pid status=0
   dir=$(make_primary_dir "$TMP_ROOT/park-clock-unmarked")
@@ -1854,6 +1899,7 @@ test_quiet_park_renews_at_the_park_boundary
 test_boundary_real_event_has_no_renewal_label
 test_renewal_caps_unconfirmed_successor_wait
 test_park_boundary_reaps_term_resistant_arm_before_deadline
+test_superseded_boundary_does_not_stop_the_watcher
 test_park_clock_requires_the_test_marker
 test_term_mid_arm_commits_failure_and_rewakes
 test_abandoned_owner_claim_is_reclaimed_and_rearms

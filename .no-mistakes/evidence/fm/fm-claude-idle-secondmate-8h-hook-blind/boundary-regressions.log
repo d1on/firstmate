@@ -1,0 +1,7 @@
+ok - auto-arm: a quiet park renews itself at the park boundary with one rewake and a covering successor
+ok - auto-arm: a boundary close carrying a real event is not labelled no-event
+ok - auto-arm: an unconfirmed successor cannot consume the renewal's hook budget
+ok - auto-arm: a TERM-resistant arm cannot exhaust the renewal budget
+ok - auto-arm: a superseded boundary leaves a started arm and its shared watcher alone until natural close
+ok - auto-arm: the test clock and removed overrides cannot shorten an unmarked park
+ok - auto-arm: TERM mid-arm commits a durable failure and exits 2 for rewake

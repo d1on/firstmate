@@ -1,0 +1,1 @@
+ok - watch-arm: scoped stop leaves another cycle intact while unscoped stop recovers stale locks

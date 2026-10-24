@@ -1,0 +1,11 @@
+Real watcher pid=35401, identity=Fri Oct 23 03:31:54 2026     bash /Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M5B27XSJK2QW4D1ZDVVSRCYD/bin/fm-watch.sh
+watcher: none running
+
+Wrong PID: original cycle still live and lock intact.
+watcher: none running
+
+Wrong identity: original cycle still live, lock intact, no downtime.
+watcher: stopped pid=35401
+
+Matching stop removed lock; durable downtime: pending:downtime:35401.1792722716.eICo8C
+

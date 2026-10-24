@@ -1,0 +1,9 @@
+watcher: started pid=59406 (beacon fresh)
+
+active watcher pid=59406 identity=Sat Oct 24 15:25:20 2026     bash /Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M5Q4GC8RA8TZFR8MGVFXYEKM/bin/fm-watch.sh
+watcher: none running
+Identity mismatch: real watcher and lock preserved; no downtime marker.
+watcher: none running
+PID mismatch: real watcher and lock preserved.
+watcher: stopped pid=59406
+Matching cycle: real watcher stopped, lock released, downtime persisted.

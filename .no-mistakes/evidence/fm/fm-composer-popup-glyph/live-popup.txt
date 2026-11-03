@@ -1,0 +1,34 @@
+env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_HOME='/Users/dion/.no-mistakes/worktrees/
+774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_NO_FLICKER=0 CLAUDE_CODE
+_ENABLE_PROMPT_SUGGESTION=false '/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG610E
+192Q958AF5EZMK/.claude303/node_modules/.bin/claude' --dangerously-skip-permissions
+01M6envG610E192Q958AF5EZMK on  HEAD [?]                     '/Users/dion/.no-mistakes/worktr
+ees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_NO_FLICKER=0 CLAUDE_
+CODE_ENABLE_PROMPT_SUGGESTION=false '/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG
+610E192Q958AF5EZMK/.claude303/node_modules/.bin/claude' --dangerously-skip-permissions
+ ▐▛███▛█   Claude Code v2.1.303
+▝▜██████▀  Opus 5.5 with medium effort · Claude Ultra
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK
+
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+❯ /exit
+─────────────────────────────────────────────────────────────────────────────────────────────
+  ❯ /exit                                Exit the CLI
+    /extreme-software-optimization       Profile-driven performance optimization with
+                                         behavior proofs. Use when: optimize, slow, bottle…
+    /context                             Visualize current context usage as a colored grid
+    /vercel:next-cache-components        (vercel) Next.js 16 Cache Components guidance —
+                                         PPR, use cache directive, cacheLife, cacheTag, up…
+    /vercel:next-forge                   (vercel) next-forge expert guidance —
+                                         production-grade Turborepo monorepo SaaS starter …
+    /vercel:next-upgrade                 (vercel) Upgrade Next.js to the latest version
+                                         following official migration guides and codemods.…
+    /vercel:nextjs                       (vercel) Next.js App Router expert guidance. Use
+                                         when building, debugging, or architecting Next.js…
+    /browser-extension-automation        Bypass bot detection via browser extension. Use
+                                         when Google blocks Playwright, OAuth flows fail, …
+    /codebase-pattern-extraction         Mine patterns that recur across multiple projects
+                                         and generalize into reusable artifacts. Use when …
+    /admin-page-for-nextjs-sites         Design cohesive Next.js SaaS admin cockpits. Use
+                                         when building or expanding `/admin` and `/api/adm…

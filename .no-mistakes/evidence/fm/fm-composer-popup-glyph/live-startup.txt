@@ -1,0 +1,17 @@
+env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_HOME='/Users/dion/.no-mistakes/worktrees/
+774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_NO_FLICKER=0 CLAUDE_CODE
+_ENABLE_PROMPT_SUGGESTION=false '/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG610E
+192Q958AF5EZMK/.claude303/node_modules/.bin/claude' --dangerously-skip-permissions
+01M6envG610E192Q958AF5EZMK on  HEAD [?]                     '/Users/dion/.no-mistakes/worktr
+ees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_NO_FLICKER=0 CLAUDE_
+CODE_ENABLE_PROMPT_SUGGESTION=false '/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG
+610E192Q958AF5EZMK/.claude303/node_modules/.bin/claude' --dangerously-skip-permissions
+ ▐▛███▛█   Claude Code v2.1.303
+▝▜██████▀  Opus 5.5 with medium effort · Claude Ultra
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK
+
+
+─────────────────────────────────────────────────────────────────────────────────────────────
+❯
+─────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ bypass permissions on (shift+tab to cycle) · ← for agents           ◐ medium · /effort

@@ -1,0 +1,8 @@
+env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_HOME='/Users/dion/.no-mistakes/worktrees/
+774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_ENABLE_PROMPT_SUGGESTION
+=false claude --dangerously-skip-permissions
+01M6envG610E192Q958AF5EZMK on  HEAD [?]                     '/Users/dion/.no-mistakes/worktr
+ees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_ENABLE_PROMPT_SUGGES
+TION=false claude --dangerously-skip-permissions
+01M6GWFG610E192Q958AF5EZMK on  HEAD [?] 11s
+❯

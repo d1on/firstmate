@@ -1,0 +1,34 @@
+env -u NO_MISTAKES_GATE -u FM_GATE_REFUSE_BYPASS FM_HOME='/Users/dion/.no-mistakes/worktrees/
+774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home' CLAUDE_CODE_NO_FLICKER=0 CLAUDE_CODE
+_ENABLE_PROMPT_SUGGESTION=false '/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG610E
+192Q958AF5EZMK/.claude303/node_modules/.bin/claude' --dangerously-skip-permissions
+[0m[1m[38;5;6m01M6[0m[4m[38;5;2menv[0m[1m[38;5;6mG610E192Q958AF5EZMK[0m on [0m[1m[38;5;5m HEAD[0m [0m[1m[38;5;1m[?][0m                     [0m[38;5;3m'/Users/dion/.no-mistakes/worktr[0m
+[0m[38;5;3mees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK/.popup-lab-home'[0m CLAUDE_CODE_NO_FLICKER=0 CLAUDE_
+CODE_ENABLE_PROMPT_SUGGESTION=false [0m[38;5;2m'/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG[0m
+[0m[38;5;2m610E192Q958AF5EZMK/.claude303/node_modules/.bin/claude'[0m --dangerously-skip-permissions
+[0m[38;2;215;119;87m ▐[0m[38;2;215;119;87m[48;2;0;0;0m▛███▛█   [0m[1mClaude Code [0m[38;2;153;153;153mv2.1.303[0m
+[0m[38;2;215;119;87m▝▜[0m[38;2;215;119;87m[48;2;0;0;0m█████[0m[38;2;215;119;87m█▀  [0m[38;2;153;153;153mOpus 5.5 with medium effort · Claude Ultra[0m
+[0m[38;2;215;119;87m ▝▝   ▝▝   [0m[38;2;153;153;153m~/.no-mistakes/worktrees/774143b5fc8e/01M6GWFG610E192Q958AF5EZMK[0m
+
+
+[0m[38;2;136;136;136m─────────────────────────────────────────────────────────────────────────────────────────────[0m
+❯ [0m[38;2;177;185;249m/exit[0m
+[0m[38;2;136;136;136m─────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [0m[38;2;177;185;249m❯ /[0m[1m[38;2;177;185;249mexit[0m[38;2;177;185;249m                                [0m[1m[38;2;177;185;249mExit[0m[38;2;177;185;249m the CLI[0m         
+  [0m[38;2;153;153;153m  /[0m[1mex[0m[38;2;153;153;153mtreme-software-opt[0m[1mi[0m[38;2;153;153;153mmiza[0m[1mt[0m[38;2;153;153;153mion       Profile-driven performance optimization with[0m
+                                         [0m[38;2;153;153;153mbehavior proofs. Use when: optimize, slow, bottle…[0m
+  [0m[38;2;153;153;153m  /context                             Visualize current context usage as a colored grid[0m
+  [0m[38;2;153;153;153m  /vercel:next-cache-components        (vercel) Next.js 16 Cache Components guidance —[0m
+                                         [0m[38;2;153;153;153mPPR, use cache directive, cacheLife, cacheTag, up…[0m
+  [0m[38;2;153;153;153m  /vercel:next-forge                   (vercel) next-forge expert guidance —[0m
+                                         [0m[38;2;153;153;153mproduction-grade Turborepo monorepo SaaS starter …[0m
+  [0m[38;2;153;153;153m  /vercel:next-upgrade                 (vercel) Upgrade Next.js to the latest version[0m
+                                         [0m[38;2;153;153;153mfollowing official migration guides and codemods.…[0m
+  [0m[38;2;153;153;153m  /vercel:nextjs                       (vercel) Next.js App Router expert guidance. Use[0m
+                                         [0m[38;2;153;153;153mwhen building, debugging, or architecting Next.js…[0m
+  [0m[38;2;153;153;153m  /brows[0m[1me[0m[38;2;153;153;153mr-e[0m[1mx[0m[38;2;153;153;153mtens[0m[1mi[0m[38;2;153;153;153mon-au[0m[1mt[0m[38;2;153;153;153momation        Bypass bot detection via browser extension. Use[0m
+                                         [0m[38;2;153;153;153mwhen Google blocks Playwright, OAuth flows fail, …[0m
+  [0m[38;2;153;153;153m  /codebase-pattern-extraction         Mine patterns that recur across multiple projects[0m
+                                         [0m[38;2;153;153;153mand generalize into reusable artifacts. Use when …[0m
+  [0m[38;2;153;153;153m  /admin-pag[0m[1me[0m[38;2;153;153;153m-for-ne[0m[1mx[0m[38;2;153;153;153mtjs-s[0m[1mit[0m[38;2;153;153;153mes         Design cohesive Next.js SaaS admin cockpits. Use[0m
+                                         [0m[38;2;153;153;153mwhen building or expanding `/admin` and `/api/adm…[0m

@@ -1,0 +1,254 @@
+[
+  {
+    "capture": "000-initial-popup",
+    "old_rows": [
+      17
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "001-append-invalid",
+    "old_rows": [
+      17
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "002-append-invalid",
+    "old_rows": [],
+    "draft_rows": [
+      17
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "003-append-invalid",
+    "old_rows": [],
+    "draft_rows": [
+      17
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "004-popup-80x24-before",
+    "old_rows": [
+      17
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "005-invalid-80x24-immediate",
+    "old_rows": [
+      9
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "006-invalid-80x24-settled",
+    "old_rows": [],
+    "draft_rows": [
+      11
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "007-invalid-80x24-ctrl-l",
+    "old_rows": [],
+    "draft_rows": [
+      11
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "008-popup-60x12-before",
+    "old_rows": [
+      9
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "009-invalid-60x12-immediate",
+    "old_rows": [
+      3
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "010-invalid-60x12-settled",
+    "old_rows": [],
+    "draft_rows": [
+      3
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "011-invalid-60x12-ctrl-l",
+    "old_rows": [],
+    "draft_rows": [
+      7
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "012-popup-120x40-before",
+    "old_rows": [
+      3
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "013-invalid-120x40-immediate",
+    "old_rows": [
+      31
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "014-invalid-120x40-settled",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "015-invalid-120x40-ctrl-l",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "016-popup-120x16-before",
+    "old_rows": [
+      10
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "017-invalid-120x16-immediate",
+    "old_rows": [
+      5
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "018-invalid-120x16-settled",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "019-invalid-120x16-ctrl-l",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "020-popup-80x40-before",
+    "old_rows": [
+      5
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "021-invalid-80x40-immediate",
+    "old_rows": [
+      11
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "022-invalid-80x40-settled",
+    "old_rows": [],
+    "draft_rows": [
+      11
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "023-invalid-80x40-ctrl-l",
+    "old_rows": [],
+    "draft_rows": [
+      11
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "024-popup-120x40-before",
+    "old_rows": [
+      11
+    ],
+    "draft_rows": [],
+    "required_geometry": false,
+    "selected": "/exit"
+  },
+  {
+    "capture": "025-invalid-120x40-immediate",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "026-invalid-120x40-settled",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  },
+  {
+    "capture": "027-invalid-120x40-ctrl-l",
+    "old_rows": [],
+    "draft_rows": [
+      10
+    ],
+    "required_geometry": false,
+    "selected": "/exit! real draft"
+  }
+]

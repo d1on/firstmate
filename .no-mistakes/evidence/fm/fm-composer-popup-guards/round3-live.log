@@ -1,0 +1,24 @@
+/Users/dion/.no-mistakes/worktrees/774143b5fc8e/01M6QSN9FAK9FEV37TK4WBEWHR/.l
+2.1.303 (Claude Code)
+{"capture": "000-startup", "older_composer_rows": [], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": ""}}
+{"capture": "001-popup", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit", "unknown": "/exit Exit the CLI /context Visualize current context usage as a colored grid", "codex": "/exit Exit the CLI /context Visualize current context usage as a colored grid", "kiro": "/exit Exit the CLI"}}
+{"capture": "002-escape-old", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "003-escape-immediate", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "004-escape-settled", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "005-ctrl-c-old", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "006-ctrl-c-immediate", "older_composer_rows": [], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": ""}}
+{"capture": "007-ctrl-c-settled", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "008-multiline-old", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "009-multiline-immediate", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "010-multiline-settled", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "011-paste-old", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "012-paste-immediate", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "013-paste-settled", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "014-rapid-popup-old", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "015-rapid-popup-immediate", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "016-rapid-popup-settled", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"capture": "017-short-grid-old", "older_composer_rows": [10], "invalid_draft_rows": [], "required_geometry": false, "selected": {"claude": "/exit"}}
+{"capture": "018-short-grid-immediate", "older_composer_rows": [], "invalid_draft_rows": [0], "required_geometry": false, "selected": {"claude": "REFUSED (status 1)"}}
+{"capture": "019-short-grid-settled", "older_composer_rows": [], "invalid_draft_rows": [0], "required_geometry": false, "selected": {"claude": "REFUSED (status 1)"}}
+{"capture": "020-restored-grid", "older_composer_rows": [], "invalid_draft_rows": [10], "required_geometry": false, "selected": {"claude": "/exit! real draft"}}
+{"required_geometry_seen": false, "captures": 21}

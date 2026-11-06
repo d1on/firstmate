@@ -1,0 +1,40 @@
+
+ ▐▛███▛█   Claude Code v2.1.318
+▝▜██████▀  Opus 5.5 with medium effort · Claude Ultra
+ ▝▝   ▝▝   ~/.no-mistakes/worktrees/774143b5fc8e/01M6QSN9FAK9FEV37TK4WBEWHR
+
+⚠ Your login expires in 2 days · run /login to renew
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ❯ /exit                                           Exit the CLI
+    /extreme-software-optimization                  Profile-driven performance optimization with behavior proofs. Use
+                                                    when: optimize, slow, bottleneck, hotspot, profile, p95, latency,…
+    /context                                        Visualize current context usage as a colored grid
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ /exit
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏵⏵ auto mode on (shift+tab to cycle)

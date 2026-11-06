@@ -1,0 +1,19 @@
+BASELINE
+caller=claude lower=/exit!  real draft selected=/exit
+caller=claude lower=/exit    Exit the CLI selected=/exit
+caller=unknown lower=/exit!  real draft selected=/exit
+caller=unknown lower=/exit    Exit the CLI selected=/exit
+caller=codex lower=/exit!  real draft selected=/exit
+caller=codex lower=/exit    Exit the CLI selected=/exit
+caller=kiro lower=/exit!  real draft selected=/exit
+caller=kiro lower=/exit    Exit the CLI selected=/exit
+
+TARGET
+caller=claude lower=/exit!  real draft selected=/exit! real draft
+caller=claude lower=/exit    Exit the CLI selected=/exit
+caller=unknown lower=/exit!  real draft selected=/exit! real draft
+caller=unknown lower=/exit    Exit the CLI selected=/exit Exit the CLI
+caller=codex lower=/exit!  real draft selected=/exit! real draft
+caller=codex lower=/exit    Exit the CLI selected=/exit Exit the CLI
+caller=kiro lower=/exit!  real draft selected=/exit! real draft
+caller=kiro lower=/exit    Exit the CLI selected=/exit Exit the CLI

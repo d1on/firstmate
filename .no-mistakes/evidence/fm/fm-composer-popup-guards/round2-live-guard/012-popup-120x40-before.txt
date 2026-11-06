@@ -1,0 +1,12 @@
+▎ https://code.claude.com/docs/en/permission-modes
+
+────────────────────────────────────────────────────────────
+❯ /exit
+────────────────────────────────────────────────────────────
+  ❯ /exit                   Exit the CLI
+    /context                Visualize current context
+                            usage as a colored grid
+
+
+
+
